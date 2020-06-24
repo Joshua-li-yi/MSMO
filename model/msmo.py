@@ -54,7 +54,7 @@ def timer(func):
         r = func(*args, **kwargs)
         end = time.time()
         cost = end - start
-        print(x)
+        print(f"Cost time: {cost} s")
         return r
     return wrapper
 

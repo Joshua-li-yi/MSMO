@@ -5,8 +5,6 @@
 # @Software: PyCharm
 # @Project: MSMO
 
-from __future__ import unicode_literals, print_function, division
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -54,7 +52,7 @@ def init_wt_unif(wt):
 class Encoder(nn.Module):
     def __init__(self):
         super(Encoder, self).__init__()
-        self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
+        self.embedding = nn.embedding(config.vocab_size, config.emb_dim)
         init_wt_normal(self.embedding.weight)
 
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
