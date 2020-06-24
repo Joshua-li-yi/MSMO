@@ -11,9 +11,9 @@ import argparse
 
 import tensorflow as tf
 import torch
+import torch.optim
 from torch.nn.utils import clip_grad_norm_
 from model.model import Model
-from torch.optim import Adagrad
 
 from data_util import config
 from data_util.batcher import Batcher
@@ -25,17 +25,23 @@ use_cuda = config.use_gpu and torch.cuda.is_available()
 
 
 class Train(object):
+    """
+    train the model
+    """
     def __init__(self):
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
+
         time.sleep(15)
 
         train_dir = os.path.join(config.log_root, 'train_%d' % (int(time.time())))
+
         if not os.path.exists(train_dir):
             os.mkdir(train_dir)
 
         self.model_dir = os.path.join(train_dir, 'model')
+
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
 
@@ -58,8 +64,10 @@ class Train(object):
 
         params = list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()) + \
                  list(self.model.reduce_state.parameters())
+
         initial_lr = config.lr_coverage if config.is_coverage else config.lr
-        self.optimizer = Adagrad(params, lr=initial_lr, initial_accumulator_value=config.adagrad_init_acc)
+
+        self.optimizer = torch.optim.Adagrad(params, lr=initial_lr, initial_accumulator_value=config.adagrad_init_acc)
 
         start_iter, start_loss = 0, 0
 

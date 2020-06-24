@@ -8,18 +8,27 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+# 导入配置
 from data_util import config
 from numpy import random
-
+# 是否使用cuda加速
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
-random.seed(123)
-torch.manual_seed(123)
+random.seed(config.SEED)
+# 为CPU设置种子用于生成随机数，以十结果是确定的
+torch.manual_seed(config.SEED)
+
+# 为当前的GPU设置随机种子
+# torch.cuda.manual_seed(123)
+
 if torch.cuda.is_available():
-    torch.cuda.manual_seed_all(123)
+    # 如果使用多个GPU，为所有的GPU设置种子
+    torch.cuda.manual_seed_all(config.SEED)
 
 
+# 初始化lstm的权重
 def init_lstm_wt(lstm):
     for names in lstm._all_weights:
         for name in names:
@@ -41,18 +50,30 @@ def init_linear_wt(linear):
         linear.bias.data.normal_(std=config.trunc_norm_init_std)
 
 
+# 正太分布初始化
 def init_wt_normal(wt):
     wt.data.normal_(std=config.trunc_norm_init_std)
 
 
+# 均匀分布初始化
 def init_wt_unif(wt):
     wt.data.uniform_(-config.rand_unif_init_mag, config.rand_unif_init_mag)
 
 
+# text encode
 class Encoder(nn.Module):
+
+    """
+    txt encode
+    Attributes:
+        module
+    """
+
     def __init__(self):
         super(Encoder, self).__init__()
+        # word embedding matrix vocab_size * emb_dim
         self.embedding = nn.embedding(config.vocab_size, config.emb_dim)
+
         init_wt_normal(self.embedding.weight)
 
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
@@ -68,6 +89,7 @@ class Encoder(nn.Module):
         output, hidden = self.lstm(packed)
 
         encoder_outputs, _ = pad_packed_sequence(output, batch_first=True)  # h dim = B x t_k x n
+        # 转化为内存连续的tensor
         encoder_outputs = encoder_outputs.contiguous()
 
         encoder_feature = encoder_outputs.view(-1, 2 * config.hidden_dim)  # B * t_k x 2*hidden_dim
@@ -86,7 +108,19 @@ class ReduceState(nn.Module):
         init_linear_wt(self.reduce_c)
 
     def forward(self, hidden):
+
         h, c = hidden  # h, c dim = 2 x b x hidden_dim
+
+        """
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, head * d_k)
+        输入的x的形状为[batch size, head, 句子最大长度max_len, d_k]，
+        先执行x.transpose(1, 2)后变换为[batch size, 句子最大长度max_len, head, d_k]，
+        然后因为先执行transpose后执行view的话，两者中间先要执行contiguous，
+        把经过了transpose或t()操作的tensor重新处理为具有内存连续的有相同数据的tensor，
+        最后才能执行view(batch_size, -1, head * d_k) 把 [batch size, 句子最大长度max_len, head, d_k]
+        变换为 [batch size, 句子最大长度max_len, embedding_dim词向量维度]，head * d_k 等于 embedding_dim词向量维度。
+        """
+
         h_in = h.transpose(0, 1).contiguous().view(-1, config.hidden_dim * 2)
         hidden_reduced_h = F.relu(self.reduce_h(h_in))
         c_in = c.transpose(0, 1).contiguous().view(-1, config.hidden_dim * 2)
@@ -126,6 +160,7 @@ class Attention(nn.Module):
         attn_dist = attn_dist_ / normalization_factor
 
         attn_dist = attn_dist.unsqueeze(1)  # B x 1 x t_k
+        # 矩阵相乘
         c_t = torch.bmm(attn_dist, encoder_outputs)  # B x 1 x n
         c_t = c_t.view(-1, config.hidden_dim * 2)  # B x 2*hidden_dim
 
@@ -219,6 +254,7 @@ class Model(object):
 
         # shared the embedding between encoder and decoder
         decoder.embedding.weight = encoder.embedding.weight
+        # 不进行梯度回传，只进行向前计算
         if is_eval:
             encoder = encoder.eval()
             decoder = decoder.eval()
@@ -232,7 +268,7 @@ class Model(object):
         self.encoder = encoder
         self.decoder = decoder
         self.reduce_state = reduce_state
-
+        # 如果存在模型路径的话，就直接导入模型
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
             self.encoder.load_state_dict(state['encoder_state_dict'])

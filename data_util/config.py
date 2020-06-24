@@ -33,12 +33,17 @@ trunc_norm_init_std = 1e-4
 max_grad_norm = 2.0
 
 pointer_gen = True
-is_coverage = False
+# 是否覆盖
+is_coverage = True
+
 cov_loss_wt = 1.0
 
 eps = 1e-12
+# 训练的最大迭代次数
 max_iterations = 500000
-
+# 是否使用cuda加速
 use_gpu = True
 
 lr_coverage = 0.15
+# 随机种子
+SEED = 123

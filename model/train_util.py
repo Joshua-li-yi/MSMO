@@ -12,6 +12,7 @@ from data_util import config
 
 
 def get_input_from_batch(batch, use_cuda):
+
     batch_size = len(batch.enc_lens)
 
     enc_batch = Variable(torch.from_numpy(batch.enc_batch).long())
