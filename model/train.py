@@ -109,7 +109,9 @@ class Train(object):
                                                                                            coverage, di)
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
+
             step_loss = -torch.log(gold_probs + config.eps)
+
             if config.is_coverage:
                 step_coverage_loss = torch.sum(torch.min(attn_dist, coverage), 1)
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss

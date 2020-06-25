@@ -8,11 +8,12 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torchvision import models
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # 导入配置
 from data_util import config
 from numpy import random
+
 # 是否使用cuda加速
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -60,7 +61,6 @@ def init_wt_unif(wt):
     wt.data.uniform_(-config.rand_unif_init_mag, config.rand_unif_init_mag)
 
 
-# text encode
 class Encoder(nn.Module):
 
     """
@@ -73,10 +73,11 @@ class Encoder(nn.Module):
         super(Encoder, self).__init__()
         # word embedding matrix vocab_size * emb_dim
         self.embedding = nn.embedding(config.vocab_size, config.emb_dim)
-
+        # embedding层正太分布初始化
         init_wt_normal(self.embedding.weight)
 
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
+        # 自定义lstm初始化方案
         init_lstm_wt(self.lstm)
 
         self.W_h = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2, bias=False)
@@ -96,6 +97,58 @@ class Encoder(nn.Module):
         encoder_feature = self.W_h(encoder_feature)
 
         return encoder_outputs, encoder_feature, hidden
+
+
+# TODO (ly, 20200625): img encode
+class img_encode(nn.Module):
+    """
+    img encode
+    """
+    def __init__(self):
+        super(img_encode, self).__init__()
+        # 导入模型结构
+        net = models.vgg19(pretrained=False)
+        net.load_state_dict(torch.load(r'vgg19.pth'))
+
+        global_features_net = list(net.children())[:-6]
+        local_features_net = list(net.children())[:-9]
+
+        self.global_features_net = nn.Sequential(*global_features_net)
+        self.local_features_net = nn.Sequential(*local_features_net)
+
+    def forward(self, input):
+        """
+        :param input: 输入一张图片
+        :return global_features: 全局特征 4096 dimensions
+                local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
+        """
+        global_features = self.global_features_net(input)
+        local_features = self.local_features_net(input)
+
+        return global_features, local_features
+
+
+class img_attention(nn.Module):
+    """
+    3 variants
+    1 ATG: attention on global features
+    2 ATL: attention on local features
+    3 HAN: hierarchical visual attention on local features
+    """
+    def __init__(self):
+        super(img_attention, self).__init__()
+
+    def forward(self, global_features, local_features):
+
+        return 0
+
+
+
+class multi_attention(nn.Module):
+    def __init__(self):
+        super(multi_attention, self).__init__()
+    def forward(self):
+        return 0
 
 
 class ReduceState(nn.Module):
@@ -135,6 +188,7 @@ class Attention(nn.Module):
         # attention
         if config.is_coverage:
             self.W_c = nn.Linear(1, config.hidden_dim * 2, bias=False)
+
         self.decode_proj = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2)
         self.v = nn.Linear(config.hidden_dim * 2, 1, bias=False)
 
@@ -146,6 +200,7 @@ class Attention(nn.Module):
         dec_fea_expanded = dec_fea_expanded.view(-1, n)  # B * t_k x 2*hidden_dim
 
         att_features = encoder_feature + dec_fea_expanded  # B * t_k x 2*hidden_dim
+
         if config.is_coverage:
             coverage_input = coverage.view(-1, 1)  # B * t_k x 1
             coverage_feature = self.W_c(coverage_input)  # B * t_k x 2*hidden_dim
@@ -210,8 +265,10 @@ class Decoder(nn.Module):
         lstm_out, s_t = self.lstm(x.unsqueeze(1), s_t_1)
 
         h_decoder, c_decoder = s_t
+        # 横向拼接
         s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
                              c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
+
         c_t, attn_dist, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
                                                                enc_padding_mask, coverage)
 

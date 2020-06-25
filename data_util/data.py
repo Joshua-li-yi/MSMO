@@ -22,8 +22,6 @@ STOP_DECODING = '[STOP]'  # This has a vocab id, which is used at the end of unt
 
 
 # Note: none of <s>, </s>, [PAD], [UNK], [START], [STOP] should appear in the vocab file.
-
-
 class Vocab(object):
 
     def __init__(self, vocab_file, max_size):
@@ -84,6 +82,7 @@ class Vocab(object):
 
 
 def example_generator(data_path, single_pass):
+
     while True:
         filelist = glob.glob(data_path)  # get the list of datafiles
         assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
