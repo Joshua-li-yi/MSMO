@@ -47,3 +47,5 @@ use_gpu = True
 lr_coverage = 0.15
 # 随机种子
 SEED = 123
+# 图片的注意力机制选择
+img_attention_models = ['ATG', 'ATL', 'HAN']

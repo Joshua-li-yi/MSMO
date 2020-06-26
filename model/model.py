@@ -99,7 +99,6 @@ class Encoder(nn.Module):
         return encoder_outputs, encoder_feature, hidden
 
 
-# TODO (ly, 20200625): img encode
 class img_encode(nn.Module):
     """
     img encode
@@ -109,9 +108,9 @@ class img_encode(nn.Module):
         # 导入模型结构
         net = models.vgg19(pretrained=False)
         net.load_state_dict(torch.load(r'vgg19.pth'))
-
-        global_features_net = list(net.children())[:-6]
+        # FIXME (ly, 20200626): 这里的第几层不是很确定
         local_features_net = list(net.children())[:-9]
+        global_features_net = list(net.children())[-9:-6]
 
         self.global_features_net = nn.Sequential(*global_features_net)
         self.local_features_net = nn.Sequential(*local_features_net)
@@ -122,9 +121,8 @@ class img_encode(nn.Module):
         :return global_features: 全局特征 4096 dimensions
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
         """
-        global_features = self.global_features_net(input)
         local_features = self.local_features_net(input)
-
+        global_features = self.global_features_net(local_features)
         return global_features, local_features
 
 
@@ -135,20 +133,69 @@ class img_attention(nn.Module):
     2 ATL: attention on local features
     3 HAN: hierarchical visual attention on local features
     """
-    def __init__(self):
+    def __init__(self, img_attention_model=None, s_t_dim=0, cov_a_dim=0, d_h=0):
         super(img_attention, self).__init__()
+        self.img_attention_model = img_attention_model
+        global_features_dim = 4096
+        if img_attention_model == 'ATG':
+            self.g_star = nn.Sequential(
+                nn.Linear(in_features=global_features_dim, out_features=4096),
+                nn.Linear(out_features=d_h),
+            )
+            self.e_a = nn.Sequential(
+                nn.Linear(in_features=d_h, out_features=0,bias=False),
+                nn.Linear(in_features=s_t_dim, out_features=0,bias=False),
+            )
 
-    def forward(self, global_features, local_features):
+        elif img_attention_model == 'ATL':
+            self.g_star = nn.Linear()
 
-        return 0
+        elif img_attention_model == 'HAN':
+            self.g_star = nn.Linear()
 
+    def forward(self, global_features, local_features, s_t, cov_a):
+        if self.img_attention_model == 'ATG':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        elif self.img_attention_model == 'ATL':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        elif self.img_attention_model == 'HAN':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        c_img = torch.sum(torch.mul(alpha_a, g_star))
+        return c_img
 
 
 class multi_attention(nn.Module):
-    def __init__(self):
+    def __init__(self, c_txt_dim=0, c_img_dim=0, s_t_dim=0):
         super(multi_attention, self).__init__()
-    def forward(self):
-        return 0
+        self.s_t = nn.Linear(in_features=s_t_dim, bias=False)
+        self.c_txt = nn.Linear(in_features=c_txt_dim, bias=False)
+        self.e_txt = nn.Linear(in_features=c_txt_dim,bias=False)
+
+        self.c_img = nn.Linear(in_features=c_img_dim, bias=False)
+        self.e_img = nn.Linear(in_features=c_img_dim, bias=False)
+
+    def forward(self, input_c_txt, input_c_img, input_s_t):
+        s_t = self.s_t(input_s_t)
+        c_txt = self.c_txt(input_c_txt)
+        e_txt = self.e_txt(torch.sum(s_t, c_txt))
+        a_txt = F.softmax(e_txt)
+
+        c_img = self.c_img(input_c_img)
+        e_img = self.e_img(torch.sum(s_t, c_img))
+        a_img = F.softmax(e_img)
+
+        c_mm = torch.sum(torch.mul(a_txt,c_txt), torch.mul(a_img, c_img))
+
+        return c_mm
 
 
 class ReduceState(nn.Module):
