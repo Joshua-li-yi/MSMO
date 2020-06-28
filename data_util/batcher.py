@@ -13,11 +13,11 @@ import numpy as np
 import tensorflow as tf
 
 from data_util import config
-from data_util import data
+from data_util import data, config
 
 import random
 
-random.seed(1234)
+random.seed(config.SEED)
 
 
 class Example(object):
@@ -71,6 +71,7 @@ class Example(object):
             target = target[:max_len]  # no end_token
         else:  # no truncation
             target.append(stop_id)  # end token
+        # 如果input的数量不等于target的数量，就会报错
         assert len(inp) == len(target)
         return inp, target
 

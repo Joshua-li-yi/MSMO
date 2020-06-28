@@ -7,7 +7,7 @@
 
 import os
 
-root_dir = os.path.expanduser("~")
+root_dir = r'./data/'
 
 #train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
 train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/chunked/train_*")
@@ -15,6 +15,11 @@ eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_fi
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
 vocab_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/vocab")
 log_root = os.path.join(root_dir, "ptr_nw/log")
+
+train_caption_path = os.path.join(root_dir, 'caption')
+train_img_path = os.path.join(root_dir, 'img')
+train_article_path = os.path.join(root_dir, 'article')
+train_url_path = os.path.join(root_dir, 'url')
 
 # Hyperparameters
 hidden_dim = 256
@@ -31,7 +36,7 @@ adagrad_init_acc = 0.1
 rand_unif_init_mag = 0.02
 trunc_norm_init_std = 1e-4
 max_grad_norm = 2.0
-
+# 是否使用指针生成，从PGN net code 改写过来的，保留此选项，始终为True即可
 pointer_gen = True
 # 是否覆盖
 is_coverage = True
@@ -49,3 +54,8 @@ lr_coverage = 0.15
 SEED = 123
 # 图片的注意力机制选择
 img_attention_models = ['ATG', 'ATL', 'HAN']
+# 选择所用的模型
+img_attention_model = img_attention_models[0]
+# MMAE模型的选择
+methods = ['LR', 'Logis', 'MLP']
+method = methods[0]

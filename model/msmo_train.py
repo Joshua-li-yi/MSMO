@@ -1,7 +1,7 @@
 # -*- coding:utf-8 -*-
 # @Time： 2020-06-24 13:52
 # @Author: Joshua_yi
-# @FileName: train.py
+# @FileName: msmo_train.py
 # @Software: PyCharm
 # @Project: MSMO
 
@@ -111,7 +111,7 @@ class Train(object):
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
 
             step_loss = -torch.log(gold_probs + config.eps)
-
+            # TODO (ly, 20200627): 需要增加相对于img 的 loss部分
             if config.is_coverage:
                 step_coverage_loss = torch.sum(torch.min(attn_dist, coverage), 1)
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss

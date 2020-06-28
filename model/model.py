@@ -88,11 +88,9 @@ class Encoder(nn.Module):
 
         packed = pack_padded_sequence(embedded, seq_lens, batch_first=True)
         output, hidden = self.lstm(packed)
-
         encoder_outputs, _ = pad_packed_sequence(output, batch_first=True)  # h dim = B x t_k x n
         # 转化为内存连续的tensor
         encoder_outputs = encoder_outputs.contiguous()
-
         encoder_feature = encoder_outputs.view(-1, 2 * config.hidden_dim)  # B * t_k x 2*hidden_dim
         encoder_feature = self.W_h(encoder_feature)
 
@@ -122,8 +120,11 @@ class img_encode(nn.Module):
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
         """
         local_features = self.local_features_net(input)
+        # 维度转化
+        local_features = local_features.view(-1, 521, 49)  # B*49*512
         global_features = self.global_features_net(local_features)
-        return global_features, local_features
+
+        return local_features, global_features
 
 
 class img_attention(nn.Module):
@@ -138,10 +139,14 @@ class img_attention(nn.Module):
         self.img_attention_model = img_attention_model
         global_features_dim = 4096
         if img_attention_model == 'ATG':
+            self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
+            self.w_g_star = nn.Linear(in_features=global_features_dim, out_features=config.hidden_dim)
+
             self.g_star = nn.Sequential(
-                nn.Linear(in_features=global_features_dim, out_features=4096),
-                nn.Linear(out_features=d_h),
+                self.w_g,
+                self.w_g_star,
             )
+            self.w_a = nn.Linear(in_features=config.hidden_dim, out_features=0)
             self.e_a = nn.Sequential(
                 nn.Linear(in_features=d_h, out_features=0,bias=False),
                 nn.Linear(in_features=s_t_dim, out_features=0,bias=False),
