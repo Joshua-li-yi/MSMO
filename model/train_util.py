@@ -9,6 +9,19 @@ from torch.autograd import Variable
 import numpy as np
 import torch
 from data_util import config
+import time
+
+# 时间使用装饰器
+# 使用时直接在函数前加 @timer
+def timer(func):
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        r = func(*args, **kwargs)
+        end = time.time()
+        cost = end - start
+        print(f"Cost time: {cost} s")
+        return r
+    return wrapper
 
 
 def get_input_from_batch(batch, use_cuda):

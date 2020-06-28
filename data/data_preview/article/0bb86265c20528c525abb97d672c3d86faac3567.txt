@@ -1,0 +1,50 @@
+@title
+Revolutionary cut and paste gene-editing tool sets its sights on cancer 's ` command centre '
+
+@body
+The ` cut and paste ' gene technique famous for transforming the way we can edit DNA has set its sights on cancer 's ` command centre ' .
+CRISPR-Cas9 is a modern ` cut and paste ' tool for making precise edits in DNA .
+Researchers used the tool to target fusion genes , mutations that arise when two genes fuse to make an unhealthy hybrid , in mice .
+Scroll down for video
+Researchers used CRISPR to target cancer-causing fusion genes .
+CRISPR works by cutting out a target area of DNA and replacing it with something else .
+The scientists analysed the unique genetic code of specific fusion genes associated with cancer .
+They used this code to tell the biological tool where to snip in the mice 's DNA code .
+The tool then replaced these cancer-causing genetic hybrids with cancer-killing genes instead .
+When treated with the CRISPR tool , mice with transplanted human prostate and liver cancer experienced tumour shrinkage of up to 30 per cent .
+The promising results could one day be used to inform treatment of prostate , lung and ovary cancer .
+The technique caused tumours to shrink and increased survival rates when tested on mice .
+` This is the first time that gene editing has been used to specifically target cancer fusion genes , ' said Dr Jian-Hua Luo , from University of Pittsburgh .
+` It is really exciting because it lays the groundwork for what could become a totally new approach to treating cancer .
+` Other types of cancer treatments target the foot soldiers of the army .
+` Our approach is to target the command centre , so there is no chance for the enemy 's soldiers to regroup in the battlefield for a comeback . '
+Researchers used CRISPR to target cancer-causing fusion genes .
+CRISPR works by cutting out a target area of DNA and replacing it with something else .
+The scientists analysed the unique genetic code of specific fusion genes associated with cancer .
+They used this code to tell the biological tool where to snip in the mice 's DNA code .
+The tool then replaced these cancer-causing genetic hybrids with cancer-killing genes instead .
+When treated with the CRISPR tool , mice with transplanted human prostate and liver cancer experienced tumour shrinkage of up to 30 per cent .
+All the animals survived to the end of the eight-week test .
+And because the biological technique targets specific regions of the DNA , the animals experienced little harmful side-effects .
+In the future , the researchers plan to test whether this technique could completely eradicate the disease in mice rather than just induce partial shrinkage .
+The new research was published in the journal Nature Biotechnology .
+CRISPR-Cas9 is a tool for making precise edits in DNA , discovered in bacteria .
+The acronym stands for ` Clustered Regularly Inter-Spaced Palindromic Repeats ' .
+The technique involves a DNA cutting enzyme and a small tag which tells the enzyme where to cut .
+By editing this tag , scientists are able to target the enzyme to specific regions of DNA and make precise cuts , wherever they like .
+
+
+It has been used to ` silence ' genes - effectively switching them off .
+When cellular machinery repairs the DNA break , it removes a small snip of DNA .
+In this way , researchers can precisely turn off specific genes in the genome .
+The approach has been used previously to edit the HBB gene responsible for a condition called β-thalassaemia .
+
+@summary
+CRISPR-Cas9 is a modern ` cut and paste ' tool for making precise edits in DNA
+
+@summary
+Researchers used the tool to target cancer 's ` command centre ' in mice
+
+@summary
+Promising results could one day be used to treat prostate , lung and ovary cancer
+

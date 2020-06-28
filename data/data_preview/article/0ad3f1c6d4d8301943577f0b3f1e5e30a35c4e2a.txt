@@ -1,0 +1,39 @@
+@title
+Apple leases a fleet of Lexus SUV 's from Hertz to test its self-driving technology
+
+@body
+Apple is leasing a small fleet of cars from rental company Hertz Global Holdings to test its self-driving technology , Bloomberg has reported .
+Apple is renting Lexus RX450h sport-utility vehicles from Hertz 's Donlen fleet-management unit , according to the Bloomberg report , citing documents released recently by the California Department of Motor Vehicles .
+The iPhone maker is concentrating on technology for self-driving cars , Chief Executive Tim Cook said earlier this month in an interview with Bloomberg .
+Apple officially secured a permit to test autonomous vehicles in California on April 14 .
+Rumours began sweeping the web last year that Apple was toying with the idea of developing its own self-driving car .
+But Apple executives had been coy about their interest in the vehicles .
+Chief Executive Tim Cook had previously suggested that Apple wants to move beyond integration of Apple smartphones into vehicle infotainment systems .
+Now Mr Cook has officially confirmed that Apple is building self-driving AI .
+But the CEO declined to say whether Apple wanted to build its own car in future .
+Hertz shares were up 13.5 percent at $ 10.82 , while shares of Apple were slightly down .
+Hertz and Apple were not immediately available for comment .
+Alphabet 's self-driving car unit Waymo announced a similar partnership with Avis Budget Group , earlier on Monday , to offer fleet support and maintenance services for its fleet of autonomous vehicles .
+Apple 's chief executive Tim Cook has previously confirmed that the company is working on software for self-driving cars .
+The company has long been rumoured to be working on driverless technology , and recently autonomous vehicles have been spotted around its California headquarters .
+But Apple , which has already invested heavily in machine learning and automation in computing , had refused to reveal its plans on cars until now .
+` We 're focusing on autonomous systems , ' Mr Cook told Bloomberg .
+` It 's a core technology that we view as very important .
+` We sort of see it as the mother of all AI projects - it 's probably one of the most difficult AI projects actually to work on . '
+The intentions of Apple 's move into driverless car technology , codenamed Project Titan , changed last year when the company stopped working on its own car to develop self-driving AI that could be fitted into other vehicles .
+Mr Cook declined to say whether Apple wanted to build its own car in future .
+` We 're not really saying from a product point of view what we will do , ' he said .
+While Apple had not formally announced plans to build self-driving technology before , the company 's interest was confirmed earlier this year when it was granted a permit to test the vehicles .
+In April , one of Apple 's fleet of prototype self-driving vehicles was captured emerging from a Silicon Valley research facility .
+
+
+
+@summary
+Apple is renting Lexus RX450h sport-utility vehicles from Hertz
+
+@summary
+The iPhone maker is concentrating on technology for self-driving cars
+
+@summary
+Tim Cook says firm sees it as ` the mother of all AI projects '
+

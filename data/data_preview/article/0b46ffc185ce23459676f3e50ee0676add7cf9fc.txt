@@ -1,0 +1,46 @@
+@title
+Are YOU a night owl ? It 's probably in your genes : Scientists discover gene mutation that makes some people want to stay up late
+
+@body
+If you ca n't fall asleep until the early hours of the morning , your genes might be to blame .
+A new study has found that a DNA mutation is responsible for keeping you awake at night .
+Scientists say that people with variants of a specific gene have a longer sleep-wake cycle , which keeps you up longer .
+The CDC estimates that between 50 million and 70 million US adults have a sleep or wakefulness disorder .
+People who self-categorize as night owls are often diagnosed with delayed sleep phase disorder -LRB- DSPD -RRB- . Their 24-hour sleep-wake cycle is delayed , making them energetic long after most people have fallen asleep .
+
+Most people with DPSD are forced to wake up before their bodies tell them to in order to make it to work or school on time , which can lead not only to insomnia early in the night but also to fatigue during the day .
+In addition , sufferers can be predisposed to chronic diseases such as diabetes , obesity and depression .
+The study , conducted at Rockefeller University in New York City , asked subjects with DPSD to spend two weeks in a laboratory apartment that was isolated from all cues to the time of day , eating and sleeping whenever they were inclined .
+Researchers also collected skin cells from each person .
+Some people are born with a gene that helps them sleep better at night .
+Scientists say this specific gene , required for normal sleep , makes you sleep fitfully or peacefully - depending on whether or not the gene is intact .
+Researchers at Washington State University studied mice , humans and fruit flies to explore how gene expression affects the sleep-wake cycle .
+Lead investigator Dr Jason Gerstner , an assistant research professor at WSU , found that a gene called FABP7 changed over the day throughout the brains of mice .
+This suggested the gene is required for normal sleep in mammals .
+In fruit flies , humans , and mice , the team found that those with inactive versions of FABP7 slept more fitfully while those with intact version slept more peacefully .
+
+Experts say this is the first insight into how our DNA affects our sleep-wake cycle .
+When the researchers examined the DNA one variant stood out : a mutation in CRY1 , a gene that had already been implicated in the circadian cycle .
+The circadian clock is an internal biological clock that normally dictates when you feel sleepy each night and when you 're ready to wake up .
+In a healthy circadian clock , a handful of genes turn on and off over a 24-hour cycle .
+The protein made by CRY1 is normally responsible for suppressing some of these genes during certain parts of the cycle .
+But the researchers discovered that a mutation makes the CRY1 protein more active than usual , keeping other clock genes switched off for a longer period of time .
+` Melatonin levels start to rise around nine or 10 at night in most people , ' said senior author Dr Michael Young , head of Rockefeller 's Laboratory of Genetics .
+In DPSD patients , ` that does n't happen until two or three in the morning ' .
+Researchers discovered the mutation is dominant , which means that having just one copy of it can cause a sleep disorder .
+` Just finding the cause does n't immediately fix the problem , ' said co-author and research associate Alina Patke .
+` But it 's not inconceivable that one might develop drugs in the future based on this mechanism . '
+Currently , the best way for DPSD patients to control their sleep cycles is to stick to strict schedules or to get strong light exposure during the day .
+` It 's a bit like cigarette smoking in that there are things we can do to help the problem before turning to drugs , ' said Dr Young .
+In the future , the team plans to study whether CRY1 mutations also affect the metabolic cycles of people with DSPD .
+This is because the human circadian cycle is known to not only regulate sleep , but also hunger and levels of metabolites and hormones .
+
+@summary
+A gene mutation can determine if you 're prone to staying awake at night
+
+@summary
+The gene , called CRY1 , makes a protein that generally represses other genes
+
+@summary
+But with the mutation , the protein keeps other clock genes switched off for a longer period of time
+

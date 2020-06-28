@@ -1,0 +1,41 @@
+@title
+Stress in childhood may put you at a greater risk of depression in later life by permanently changing DNA
+
+@body
+Stress in childhood may put you at a greater risk of depression in later life by permanently changing DNA , new research suggests .
+Mice exposed to stressful situations as newborns are more likely to show signs of depression when faced with another challenging scenario when fully grown , a study found .
+Researchers believe stress in early life may increase our lifelong risk of suffering from the mental health disorder by altering the DNA that is related to mood and depression .
+Lead author Dr Catherine Peña from Mount Sinai hospital in New York , said : ` Our work identifies a molecular basis for stress during a sensitive developmental window that programs a mouse 's response to stress in adulthood . '
+Study author Dr Eric Nestler added : ` This mouse paradigm will be useful for understanding the molecular correlates of increased risk of depression resulting from early life stress and could pave the way to look for such sensitive windows in human studies '
+Rock climbing significantly reduces depression , research revealed last month .
+Just eight weeks of the sport takes symptoms of the mental health disorder from moderate to mild , a study found .
+Researchers believe a combination of the sport 's physicality , alongside its social aspect and required concentration eases depression .
+Study author Eva-Maria Stelzer , from the University of Arizona , said : ` You have to be mindful and focused on the moment .
+` It does not leave much room to let your mind wonder on things that may be going on in your life - you have to focus on not falling . '
+
+How the study was carried out
+Researchers from Mount Sinai hospital exposed 10-to-20 day old mice to stress by increasing and decreasing their levels of a protein , known as Otx2 .
+This protein regulates a gene that is involved in the development of the brain , eyes , ears , tongue , skin and nose .
+Key findings
+Results , published in the journal Science , revealed the mice were more likely to develop depression-like behavior in later life when exposed to a second stressful incident .
+They were also found to express less of the gene related to development .
+Although levels of the gene returned to normal once the mice were fully grown , other parts of their DNA that are associated with stress were permanently altered .
+Dr Peña said : ` Our work identifies a molecular basis for stress during a sensitive developmental window that programs a mouse 's response to stress in adulthood .
+Dr Nestler added : ` This mouse paradigm will be useful for understanding the molecular correlates of increased risk of depression resulting from early life stress and could pave the way to look for such sensitive windows in human studies .
+` The ultimate goal of this research is to aid treatment discoveries relevant to individuals who experienced childhood stress and trauma . '
+
+@summary
+Newborn mice exposed to stress show depression when faced with it again
+
+@summary
+Stress is thought to alter the DNA related to mood , causing the mental disorder
+
+@summary
+Mice also expressed lower levels of a gene related to brain and sensory function
+
+@summary
+Gene levels increased with age , but other ` stress gene ' changes were permanent
+
+@summary
+Researchers believe this may be useful for understanding early stress in humans
+

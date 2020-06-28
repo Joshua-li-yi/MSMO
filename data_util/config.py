@@ -7,24 +7,28 @@
 
 import os
 
-root_dir = r'./data/'
+root_dir = r'D:/GitHub project/MSMO/'
 
 #train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
 train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/chunked/train_*")
 eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
-vocab_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/vocab")
-log_root = os.path.join(root_dir, "ptr_nw/log")
 
-train_caption_path = os.path.join(root_dir, 'caption')
-train_img_path = os.path.join(root_dir, 'img')
-train_article_path = os.path.join(root_dir, 'article')
-train_url_path = os.path.join(root_dir, 'url')
+vocab_path = os.path.join(root_dir, r"data/vocab")
+
+log_root = os.path.join(root_dir, "log")
+
+train_caption_path = os.path.join(root_dir, r'data/data_preview/caption')
+train_img_path = os.path.join(root_dir, r'data/data_preview/img')
+train_article_path = os.path.join(root_dir, r'data/data_preview/article/*.txt')
+train_url_path = os.path.join(root_dir, r'data/data_preview/url')
 
 # Hyperparameters
 hidden_dim = 256
 emb_dim = 128
+
 batch_size = 8
+
 max_enc_steps = 400
 max_dec_steps = 100
 beam_size = 4

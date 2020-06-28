@@ -1,0 +1,38 @@
+@title
+Could Whole Foods ban customers from checking competitor 's prices on their phone ? Amazon patents method to limit wifi browsing in stores
+
+@body
+Just days ago , Amazon revealed it is buying the Whole Foods grocery chain in a staggering $ 13.7 billion all-cash deal .
+Now , a patent recently awarded to the firm offers a look at how Amazon plans to stamp out its competition .
+The patent details a system that could prevent customers using a store 's WiFi from visiting rival websites by blocking access or even redirecting them to ` counter-competitive information , ' such as a relevant coupon or price comparison .
+Scroll down for video
+According to the patent , the ` retailer computer or retailer system , ' will be able to identify and evaluate the customer 's requested URL when connected to the store 's WiFi .
+Or , the requests may be route through a service provider system for evaluation .
+Then :
+If this is the case , one of several ` control actions ' may be instated .
+Amazon was awarded the patent , titled Physical Store Online Shopping Control , on May 30 , according to the Washington Post .
+And , it aims to prevent customers from engaging in ` mobile window shopping ' while they browse one of Amazon 's brick-and-mortar stores .
+Once customers connect to the store 's WiFi , the system can evaluate the requested content , the patent explains .
+If it spots something associated with a competitor , a number of ` control actions ' could be issued .
+` A wide variety of different types of control actions may be directed as desired in various embodiments , ' the patent explains .
+` For example , access to competitor -LRB- or other requested -RRB- information may be blocked .
+` As another example , the consumer device -LRB- or an associated browser or other application -RRB- may be redirected to other content , such as a retailer Web site .
+` In certain embodiments , a desired item may be identified and counter-competitive information -LRB- e.g. , price comparison information , a coupon , an offer to match a competitor price , information associated with complementary products , etc -RRB- may be provided to the consumer device . '
+According to the patent , the system could even alert a sales representative , who can then approach and assist that customer .
+Or , the customer could be sent a text message or email .
+The patent comes to light amid Amazon 's recent ventures into brick-and-mortar retail .
+Just last week , the firm revealed its bid for the Whole Foods chain , in a deal that 's expected to close in the second half of this year .
+With the acquisition , Amazon will expand its grocery-delivery services to the 465 Whole Foods locations across North America and the UK .
+And , earlier this year , the firm unveiled a physical convenience store in downtown Seattle -- but it replaces cashiers with the technology found in self-driving cars .
+Called ` Amazon Go ' , customers enter the store using an accompanied app , grab the items they need , and are able to walk out without stopping at a register .
+The app uses a range of sensors that detect what shoppers take off shelves and bills it to their Amazon account if they do n't put it back .
+
+@summary
+Patent details system that could prevent customers from visiting rival websites
+
+@summary
+Once customers connect to store 's WiFi , system can evaluate requested content
+
+@summary
+If it detects competitor site , it can block access or send in counter measures
+

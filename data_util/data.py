@@ -96,15 +96,22 @@ class Vocab(object):
                 writer.writerow({"word": self._id_to_word[i]})
 
 
-def example_generator(data_path, single_pass):
+def example_generator(data_path, single_pass=True):
+    """
 
+    :param data_path: 读取数据的路径
+    :param single_pass: 是否按顺序读取文件，默认为True
+    :return:
+    """
     while True:
         filelist = glob.glob(data_path)  # get the list of datafiles
         assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
+
         if single_pass:
             filelist = sorted(filelist)
         else:
             random.shuffle(filelist)
+
         for f in filelist:
             reader = open(f, 'rb')
             while True:

@@ -1,0 +1,31 @@
+@title
+Twitter intensifies its campaign against hate by BLOCKING abusive tweeters from making new accounts
+
+@body
+Twitter has intensified its campaign against hate speech and abuse .
+The company said that it has begun identifying people who have been banned for abusive behavior and will stop them from creating new accounts .
+Twitter has been under fire after nearly a decade of failure to address hate and abuse on the site .
+In July , Twitter banned conservative provocateur Milo Yiannopoulos , an editor of the right-wing site Breitbart News .
+The company accused Yiannopoulos of ` participating in or inciting targeted abuse of individuals . '
+The move came a day after Yiannopoulos had incited his 300,000 followers to barrage Ghostbusters star Leslie Jones with racist and demeaning tweets .
+Twitter also announced today that it is creating a ` safe search ' feature that removes tweets with potentially sensitive content .
+The safe search will also censor tweets from blocked and muted accounts from search results .
+The tweets will still exist on Twitter if people look for them but wo n't appear in general search results .
+Twitter is also singling out and collapsing potentially abusive and ` low-quality ' replies so only the most relevant conversations surface .
+These replies will also be accessible to those who seek them out , but Twitter is making them less visible .
+The company says the changes will be implemented in the coming weeks .
+Balancing its reputation as a free speech haven has at times come into conflict with efforts to protect users from abuse .
+In July , the company banned conservative provocateur Milo Yiannopoulos , an editor of the right-wing site Breitbart News .
+Twitter accused Yiannopoulos of ` participating in or inciting targeted abuse of individuals . '
+The move came a day after Yiannopoulos had incited his 300,000 followers to barrage Ghostbusters star Leslie Jones with racist and demeaning tweets .
+
+
+@summary
+Twitter will also introduce a ` safe search ' function that removes ` sensitive ' tweets
+
+@summary
+The safe search will also censor tweets from blocked accounts from searches
+
+@summary
+Twitter says the changes will be implemented in the coming weeks
+

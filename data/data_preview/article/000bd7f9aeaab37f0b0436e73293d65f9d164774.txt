@@ -1,0 +1,44 @@
+@title
+The blood test that detects killer SEPSIS in five minutes : Revolutionary treatment could save thousands of lives , and may soon be introduced in the NHS
+
+@body
+A blood test that can detect sepsis in five minutes could save thousands of lives .
+The revolutionary test has just been approved in Europe and could be used in NHS hospitals next year to prevent deaths .
+Sepsis is a life-threatening condition that occurs when the body 's immune system over-reacts to an infection and starts attacking its own tissues and organs .
+This can be triggered by anything from cuts and bites to urinary or chest infections . About 150,000 people develop sepsis in the UK every year , with 44,000 deaths .
+Many deaths could be avoided with greater awareness of symptoms and faster treatment .
+The Daily Mail 's End The Sepsis Scandal campaign has repeatedly called for a radical improvement in how the NHS tackles the condition .
+Sepsis is treatable with intravenous antibiotics and fluids , but these must be given very early on . If not treated promptly , it can lead to tissue damage and major organ failure .
+Even if a patient survives , they can suffer brain damage or loss of limbs .
+Diagnosis is currently based on an assessment of clinical signs such as a high temperature , abnormal heart and breathing rates .
+The most reliable way to confirm diagnosis is to send a blood sample to a laboratory , where it is cultured and tested for a number of proteins thought to be affected by infection .
+But this is not sufficiently sensitive or specific and results can take up to three days .
+This is why The UK Sepsis Trust advises that , if sepsis is suspected , antibiotic treatment should begin within an hour of diagnosis , even before blood tests are taken .
+However , a new fast-track test could help with diagnosis . The breakthrough for the technology came in 2012 when Swiss researchers found that a protein called pancreatic stone protein -LRB- PSP -RRB- in the blood is only raised in patients with sepsis .
+We all have some of this protein in our blood , but studies have shown that someone with sepsis has dramatically higher levels .
+Scientists have developed a test for it : the abioSCOPE is roughly the size of a domestic coffee machine and can be used by patients ' bedsides in A&E and intensive care units .
+If a child or adult who has had any infection -- even a mild cold -- develops one or more of the following symptoms , call 999 immediately and say you think they have sepsis :
+1 . Abnormally cold to touch .
+2 . Breathing rapidly or struggling for breath .
+3 . Very lethargic or difficult to rouse .
+4 . No urine -LRB- or wet nappy -RRB- for over 12 hours .
+5 . Skin mottled , blueish or extremely pale .
+If sepsis is suspected by doctors , antibiotic treatment must begin as soon as possible -- ideally within an hour of diagnosis -- even before blood tests have been carried out .
+To carry out the test , a single drop of blood is taken from a patient 's finger and mixed with a chemical that helps the abioSCOPE work .
+The sample is then put in the abioSCOPE machine , which analyses the blood . The blood interacts with sensors that detect PSP levels . Test results are displayed on a screen and can be transferred wirelessly to hospital records .
+This entire process takes only five minutes .
+Commenting on the new test , Dr Ron Daniels , a consultant in critical care and chief executive of The UK Sepsis Trust , says : ` Any test that can help us identify sepsis earlier is likely to help save lives , especially if it can help differentiate between people with sepsis and those with symptoms of infection from other causes .
+` This new test for some patients we 're unsure about might work well as part of the jigsaw in deciding whether or not to start antibiotics .
+` It will not provide the answer alone . However , it is a step forward . '
+
+
+
+@summary
+Sepsis is a life-threatening condition caused by your own body 's immune system
+
+@summary
+It occurs when your body overreacts to any infection , even to a small cut or bite
+
+@summary
+The new test has the potential to save hundreds of thousands in emergency care
+

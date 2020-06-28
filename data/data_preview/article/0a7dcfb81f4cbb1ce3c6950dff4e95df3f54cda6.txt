@@ -1,0 +1,41 @@
+@title
+NSA code that can break into any Windows computer is released b yhacking collective that claims spy agency spie penetrated Mideast banking networks
+
+@body
+TheShadowBrokers hacking group has released a new batch of documents purportedly taken from the National Security Agency , which suggests that American spies have burrowed deep into the Middle East 's financial network .
+The documents appear to show that the NSA compromised the Dubai office of the anti-money laundering and financial services firm EastNets .
+The company said Friday that the leaked documents were dated and denied that any customer data had been affected .
+TheShadowBrokers , which startled the security experts last year by releasing some of the NSA 's hacking tools , has recently resumed pouring secrets into the public domain .
+In a first for TheShadowBrokers , the data includes PowerPoint slides and purported target lists , suggesting that the group has access to a broader range of data than previously known .
+` This is by far the most brutal dump , ' said Comae Technologies founder Matt Suiche , who has closely followed the group 's disclosures and initially helped confirm its connection to the NSA last year .
+In a blog post , he said it appeared that thousands of employee accounts and machines from the EastNets ' offices had been compromised and that financial institutions in Kuwait , Bahrain and the Palestinian territories had been targeted for espionage .
+In a statement , EastNets said there was ` no credibility ' to the allegation that its customers ' details had been stolen .
+The company , which helps connect customers to the financial world 's electronic backbone , SWIFT , said the ShadowBrokers documents referred to a ` low-level internal server ' that had since been retired and that a ` complete check ' of its systems had turned up no evidence of any compromise .
+The denial drew skepticism from those who 'd reviewed the files .
+` Eastnets ' claim is impossible to believe , ' said Kevin Beaumont , who was one of several experts who spent Friday combing through the documents and trying out the code .
+He said he 'd found password dumps , an Excel spreadsheet outlining the internal architecture of the company 's server and one file that was ` just a massive log of hacking on their organization . '
+Repeated messages seeking clarification from EastNets went unreturned .
+Beaumont said there was bad news in the release for Microsoft as well , explaining that the malicious code published Friday appeared to exploit previously undiscovered weaknesses in older versions of its Windows operating system -- the mark of a sophisticated actor and a potential worry for many Windows users .
+The opinion was seconded by Matthew Hickey of Prestbury , England-based cybersecurity company Hacker House .
+` It 's an absolute disaster , ' Hickey said in an email . ' I have been able to hack pretty much every Windows version here in my lab using this leak . '
+` We are reviewing the report and will take the necessary actions to protect our customers , ' a Microsoft spokesperson told WIRED , which reports that if the leaked Windows code is as devastating as it appears to be , it could leave millions of Windows users at risk until the appropriate patches are created .
+Hickey told WIRED that the Windows hacking tool appears to target all recent version of Windows , with the exception of the latest , Windows 10 .
+Several of the tools would let a hacker remotely gain the ability to run their own code on a targeted Windows-operated machine .
+` There are exploits here that are quite likely zero days that will let you hack into any number of servers on the internet , ' Hickey told WIRED . ` This is as big as it gets . It 's internet God mode . '
+Suiche said other documents in the ShadowBrokers release suggested an NSA effort to monitor the world 's financial transactions that went beyond EastNets .
+` I 'll bet it 's not the only SWIFT service bureau that 's been compromised , ' he said .
+The NSA did not immediately return emails .
+
+
+@summary
+Hacking group ShadowBrokers has released data including PowerPoint slides and target lists suggesting the NSA had compromised the Dubai EastNets office
+
+@summary
+Info implies financial institutions in the Mideast were targeted for espionage
+
+@summary
+EastNets is a global anti-money laundering and financial services firm
+
+@summary
+ShadowBrokers also released a Windows hacking tool that apparently can let a hacker remotely run their own code on a targeted Windows-operating machines
+

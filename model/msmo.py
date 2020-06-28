@@ -4,491 +4,381 @@
 # @FileName: msmo.py
 # @Software: PyCharm
 # @Project: MSMO
-import time
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets, transforms
-from torch.autograd import Variable
-import numpy as np
 from torchvision import models
-import matplotlib.pyplot as plt
-from torchsummary import summary
-from typing import Optional, List
-from torch import Tensor
-import copy
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
+# 导入配置
+from data_util import config
+from numpy import random
 
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# 是否使用cuda加速
+use_cuda = config.use_gpu and torch.cuda.is_available()
 
-# TODO (ly, 20200622): parameters
-train_dir = "data/train"           #训练集路径
-# Hyper parameters
-num_epochs = 5
-num_classes = 10
-batch_size = 100
-learning_rate = 0.001
+random.seed(config.SEED)
+# 为CPU设置种子用于生成随机数，以十结果是确定的
+torch.manual_seed(config.SEED)
 
-# TODO (ly, 20200622): load data
-# train_dataset = torchvision.datasets.MNIST(root='/data/',
-#                                            train=True,
-#                                            transform=transforms.ToTensor(),
-#                                            download=True)
-# test_dataset = torchvision.datasets.MNIST(root='/data/',
-#                                           train=False,
-#                                           transform=transforms.ToTensor())
-# # Data loader
-# train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
-#                                            batch_size=batch_size,
-#                                            shuffle=True)
-#
-# test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
-#                                           batch_size=batch_size,
-#                                           shuffle=False)
+# 为当前的GPU设置随机种子
+# torch.cuda.manual_seed(123)
+
+if torch.cuda.is_available():
+    # 如果使用多个GPU，为所有的GPU设置种子
+    torch.cuda.manual_seed_all(config.SEED)
 
 
-# TODO (ly, 20200623): helper function
-def timer(func):
-    def wrapper(*args, **kwargs):
-        start = time.time()
-        r = func(*args, **kwargs)
-        end = time.time()
-        cost = end - start
-        print(f"Cost time: {cost} s")
-        return r
-    return wrapper
+# 初始化lstm的权重
+def init_lstm_wt(lstm):
+    for names in lstm._all_weights:
+        for name in names:
+            if name.startswith('weight_'):
+                wt = getattr(lstm, name)
+                wt.data.uniform_(-config.rand_unif_init_mag, config.rand_unif_init_mag)
+            elif name.startswith('bias_'):
+                # set forget bias to 1
+                bias = getattr(lstm, name)
+                n = bias.size(0)
+                start, end = n // 4, n // 2
+                bias.data.fill_(0.)
+                bias.data[start:end].fill_(1.)
 
 
-def _get_clones(module, N):
-    return nn.ModuleList([copy.deepcopy(module) for i in range(N)])
+def init_linear_wt(linear):
+    linear.weight.data.normal_(std=config.trunc_norm_init_std)
+    if linear.bias is not None:
+        linear.bias.data.normal_(std=config.trunc_norm_init_std)
 
 
-def _get_activation_fn(activation):
-    """Return an activation function given a string"""
-    if activation == "relu":
-        return F.relu
-    if activation == "gelu":
-        return F.gelu
-    if activation == "glu":
-        return F.glu
-    raise RuntimeError(F"activation should be relu/gelu, not {activation}.")
+# 正太分布初始化
+def init_wt_normal(wt):
+    wt.data.normal_(std=config.trunc_norm_init_std)
 
 
-# TODO (ly, 20200622): text pretreatment
-@timer
-def load_txt(filename):
-
-    return 0
+# 均匀分布初始化
+def init_wt_unif(wt):
+    wt.data.uniform_(-config.rand_unif_init_mag, config.rand_unif_init_mag)
 
 
-# TODO (ly, 20200622): image encode
+class txt_encoder(nn.Module):
+
+    """
+    txt encode
+    Attributes:
+        module
+    """
+
+    def __init__(self):
+        super(txt_encoder, self).__init__()
+        # word embedding matrix vocab_size * emb_dim
+        self.embedding = nn.embedding(config.vocab_size, config.emb_dim)
+        # embedding层正太分布初始化
+        init_wt_normal(self.embedding.weight)
+
+        self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
+        # 自定义lstm初始化方案
+        init_lstm_wt(self.lstm)
+
+        self.W_h = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2, bias=False)
+
+    # seq_lens should be in descending order
+    def forward(self, input, seq_lens):
+        embedded = self.embedding(input)
+
+        packed = pack_padded_sequence(embedded, seq_lens, batch_first=True)
+        output, hidden = self.lstm(packed)
+        encoder_outputs, _ = pad_packed_sequence(output, batch_first=True)  # h dim = B x t_k x n
+        # 转化为内存连续的tensor
+        encoder_outputs = encoder_outputs.contiguous()
+        encoder_feature = encoder_outputs.view(-1, 2 * config.hidden_dim)  # B * t_k x 2*hidden_dim
+        encoder_feature = self.W_h(encoder_feature)
+
+        return encoder_outputs, encoder_feature, hidden
+
+
 class img_encode(nn.Module):
-    def __init__(self, num_classes=3):
+    """
+    img encode
+    """
+    def __init__(self):
         super(img_encode, self).__init__()
         # 导入模型结构
         net = models.vgg19(pretrained=False)
         net.load_state_dict(torch.load(r'vgg19.pth'))
-        # 加载预先下载好的预训练参数到resnet18
-        print(type(net))
+        # FIXME (ly, 20200626): 这里的第几层不是很确定
+        local_features_net = list(net.children())[:-9]
+        global_features_net = list(net.children())[-9:-6]
 
-        # summary(net, input_size=(3, 225, 225))
-        net.classifier = nn.Sequential()
-        self.features = net
-        self.classifier = nn.Sequential(
-            nn.Linear(512 * 7 * 7, 512),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(512, 128),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(128, num_classes),
-        )
+        self.global_features_net = nn.Sequential(*global_features_net)
+        self.local_features_net = nn.Sequential(*local_features_net)
 
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return x
-
-
-# --------------------训练过程---------------------------------
-# params = [{'params': md.parameters()} for md in model.children()
-#           if md in [model.classifier]]
-
-
-
-# TODO (ly, 20200622): text encode
-# coding=utf-8
-import torch
-import torch.nn as nn
-import torch.nn.utils
-from torch.autograd import Variable
-import torch.nn.functional as F
-from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence
-
-
-class PointerNet(nn.Module):
-    def __init__(self, query_vec_size, src_encoding_size, attention_type='affine'):
-        super(PointerNet, self).__init__()
-        assert attention_type in ('affine', 'dot_prod')
-        if attention_type == 'affine':
-            self.src_encoding_linear = nn.Linear(src_encoding_size, query_vec_size, bias=False)
-        self.attention_type = attention_type
-
-    def forward(self, src_encodings, src_token_mask, query_vec):
+    def forward(self, input):
         """
-        :param src_encodings: Variable(batch_size, src_sent_len, hidden_size * 2)
-        :param src_token_mask: Variable(batch_size, src_sent_len)
-        :param query_vec: Variable(tgt_action_num, batch_size, query_vec_size)
-        :return: Variable(tgt_action_num, batch_size, src_sent_len)
+        :param input: 输入一张图片
+        :return global_features: 全局特征 4096 dimensions
+                local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
         """
-        # (batch_size, 1, src_sent_len, query_vec_size)
-        if self.attention_type == 'affine':
-            src_encodings = self.src_encoding_linear(src_encodings)
-            src_encodings = src_encodings.unsqueeze(1)
-            # (batch_size, tgt_action_num, query_vec_size, 1)
-            q = query_vec.permute(1, 0, 2).unsqueeze(3)
-            # (batch_size, tgt_action_num, src_sent_len)
-            weights = torch.matmul(src_encodings, q).squeeze(3)
-            # (tgt_action_num, batch_size, src_sent_len)
-            weights = weights.permute(1, 0, 2)
+        local_features = self.local_features_net(input)
+        # 维度转化
+        local_features = local_features.view(-1, 521, 49)  # B*49*512
+        global_features = self.global_features_net(local_features)
 
-        if src_token_mask is not None:
-            # (tgt_action_num, batch_size, src_sent_len)
-            src_token_mask = src_token_mask.unsqueeze(0).expand_as(weights)
-        weights.data.masked_fill_(src_token_mask, -float('inf'))
-        ptr_weights = F.softmax(weights, dim=-1)
-        return ptr_weights
+        return local_features, global_features
 
 
-class TransformerEncoder(nn.Module):
+class img_attention(nn.Module):
+    """
+    3 variants
+    1 ATG: attention on global features
+    2 ATL: attention on local features
+    3 HAN: hierarchical visual attention on local features
+    """
+    def __init__(self, img_attention_model=None, s_t_dim=0, cov_a_dim=0, d_h=0):
+        super(img_attention, self).__init__()
+        self.img_attention_model = img_attention_model
+        global_features_dim = 4096
+        if img_attention_model == 'ATG':
+            self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
+            self.w_g_star = nn.Linear(in_features=global_features_dim, out_features=config.hidden_dim)
 
-    def __init__(self, encoder_layer, num_layers, norm=None):
-        super().__init__()
-        self.layers = _get_clones(encoder_layer, num_layers)
-        self.num_layers = num_layers
-        self.norm = norm
+            self.g_star = nn.Sequential(
+                self.w_g,
+                self.w_g_star,
+            )
+            self.w_a = nn.Linear(in_features=config.hidden_dim, out_features=0)
+            self.e_a = nn.Sequential(
+                nn.Linear(in_features=d_h, out_features=0,bias=False),
+                nn.Linear(in_features=s_t_dim, out_features=0,bias=False),
+            )
 
-    def forward(self, src,
-                mask: Optional[Tensor] = None,
-                src_key_padding_mask: Optional[Tensor] = None,
-                pos: Optional[Tensor] = None):
-        output = src
+        elif img_attention_model == 'ATL':
+            self.g_star = nn.Linear()
 
-        for layer in self.layers:
-            output = layer(output, src_mask=mask,
-                           src_key_padding_mask=src_key_padding_mask, pos=pos)
+        elif img_attention_model == 'HAN':
+            self.g_star = nn.Linear()
 
-        if self.norm is not None:
-            output = self.norm(output)
-
-        return output
-
-
-class TransformerEncoderLayer(nn.Module):
-
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
-                 activation="relu", normalize_before=False):
-        super().__init__()
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-
-        self.activation = _get_activation_fn(activation)
-        self.normalize_before = normalize_before
-
-    def with_pos_embed(self, tensor, pos: Optional[Tensor]):
-        return tensor if pos is None else tensor + pos
-
-    def forward_post(self,
-                     src,
-                     src_mask: Optional[Tensor] = None,
-                     src_key_padding_mask: Optional[Tensor] = None,
-                     pos: Optional[Tensor] = None):
-        q = k = self.with_pos_embed(src, pos)
-        src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
-                              key_padding_mask=src_key_padding_mask)[0]
-        src = src + self.dropout1(src2)
-        src = self.norm1(src)
-        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
-        src = src + self.dropout2(src2)
-        src = self.norm2(src)
-        return src
-
-    def forward_pre(self, src,
-                    src_mask: Optional[Tensor] = None,
-                    src_key_padding_mask: Optional[Tensor] = None,
-                    pos: Optional[Tensor] = None):
-        src2 = self.norm1(src)
-        q = k = self.with_pos_embed(src2, pos)
-        src2 = self.self_attn(q, k, value=src2, attn_mask=src_mask,
-                              key_padding_mask=src_key_padding_mask)[0]
-        src = src + self.dropout1(src2)
-        src2 = self.norm2(src)
-        src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
-        src = src + self.dropout2(src2)
-        return src
-
-    def forward(self, src,
-                src_mask: Optional[Tensor] = None,
-                src_key_padding_mask: Optional[Tensor] = None,
-                pos: Optional[Tensor] = None):
-        if self.normalize_before:
-            return self.forward_pre(src, src_mask, src_key_padding_mask, pos)
-        return self.forward_post(src, src_mask, src_key_padding_mask, pos)
-# TODO (ly, 20200622): text attention
-
-# TODO (ly, 20200622): image attention
-
-# TODO (ly, 20200622): multimodal attention
-
-# TODO (ly, 20200622): decode
-class TransformerDecoderLayer(nn.Module):
-
-    def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
-                 activation="relu", normalize_before=False):
-        super().__init__()
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        # Implementation of Feedforward model
-        self.linear1 = nn.Linear(d_model, dim_feedforward)
-        self.dropout = nn.Dropout(dropout)
-        self.linear2 = nn.Linear(dim_feedforward, d_model)
-
-        self.norm1 = nn.LayerNorm(d_model)
-        self.norm2 = nn.LayerNorm(d_model)
-        self.norm3 = nn.LayerNorm(d_model)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-        self.dropout3 = nn.Dropout(dropout)
-
-        self.activation = _get_activation_fn(activation)
-        self.normalize_before = normalize_before
-
-    def with_pos_embed(self, tensor, pos: Optional[Tensor]):
-        return tensor if pos is None else tensor + pos
-
-    def forward_post(self, tgt, memory,
-                     tgt_mask: Optional[Tensor] = None,
-                     memory_mask: Optional[Tensor] = None,
-                     tgt_key_padding_mask: Optional[Tensor] = None,
-                     memory_key_padding_mask: Optional[Tensor] = None,
-                     pos: Optional[Tensor] = None,
-                     query_pos: Optional[Tensor] = None):
-        q = k = self.with_pos_embed(tgt, query_pos)
-        tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
-                              key_padding_mask=tgt_key_padding_mask)[0]
-        tgt = tgt + self.dropout1(tgt2)
-        tgt = self.norm1(tgt)
-        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
-                                   key=self.with_pos_embed(memory, pos),
-                                   value=memory, attn_mask=memory_mask,
-                                   key_padding_mask=memory_key_padding_mask)[0]
-        tgt = tgt + self.dropout2(tgt2)
-        tgt = self.norm2(tgt)
-        tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
-        tgt = tgt + self.dropout3(tgt2)
-        tgt = self.norm3(tgt)
-        return tgt
-
-    def forward_pre(self, tgt, memory,
-                    tgt_mask: Optional[Tensor] = None,
-                    memory_mask: Optional[Tensor] = None,
-                    tgt_key_padding_mask: Optional[Tensor] = None,
-                    memory_key_padding_mask: Optional[Tensor] = None,
-                    pos: Optional[Tensor] = None,
-                    query_pos: Optional[Tensor] = None):
-        tgt2 = self.norm1(tgt)
-        q = k = self.with_pos_embed(tgt2, query_pos)
-        tgt2 = self.self_attn(q, k, value=tgt2, attn_mask=tgt_mask,
-                              key_padding_mask=tgt_key_padding_mask)[0]
-        tgt = tgt + self.dropout1(tgt2)
-        tgt2 = self.norm2(tgt)
-        tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt2, query_pos),
-                                   key=self.with_pos_embed(memory, pos),
-                                   value=memory, attn_mask=memory_mask,
-                                   key_padding_mask=memory_key_padding_mask)[0]
-        tgt = tgt + self.dropout2(tgt2)
-        tgt2 = self.norm3(tgt)
-        tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt2))))
-        tgt = tgt + self.dropout3(tgt2)
-        return tgt
-
-    def forward(self, tgt, memory,
-                tgt_mask: Optional[Tensor] = None,
-                memory_mask: Optional[Tensor] = None,
-                tgt_key_padding_mask: Optional[Tensor] = None,
-                memory_key_padding_mask: Optional[Tensor] = None,
-                pos: Optional[Tensor] = None,
-                query_pos: Optional[Tensor] = None):
-        if self.normalize_before:
-            return self.forward_pre(tgt, memory, tgt_mask, memory_mask,
-                                    tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
-        return self.forward_post(tgt, memory, tgt_mask, memory_mask,
-                                 tgt_key_padding_mask, memory_key_padding_mask, pos, query_pos)
+    def forward(self, global_features, local_features, s_t, cov_a):
+        if self.img_attention_model == 'ATG':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        elif self.img_attention_model == 'ATL':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        elif self.img_attention_model == 'HAN':
+            g_star = self.g_star(global_features)
+            e_a = self.e_a(g_star, s_t, cov_a)
+            e_a = F.tanh(e_a)
+            alpha_a = F.softmax(e_a)
+        c_img = torch.sum(torch.mul(alpha_a, g_star))
+        return c_img
 
 
-class TransformerDecoder(nn.Module):
+class multi_attention(nn.Module):
+    def __init__(self, c_txt_dim=0, c_img_dim=0, s_t_dim=0):
+        super(multi_attention, self).__init__()
+        self.s_t = nn.Linear(in_features=s_t_dim, bias=False)
+        self.c_txt = nn.Linear(in_features=c_txt_dim, bias=False)
+        self.e_txt = nn.Linear(in_features=c_txt_dim,bias=False)
 
-    def __init__(self, decoder_layer, num_layers, norm=None, return_intermediate=False):
-        super().__init__()
-        self.layers = _get_clones(decoder_layer, num_layers)
-        self.num_layers = num_layers
-        self.norm = norm
-        self.return_intermediate = return_intermediate
+        self.c_img = nn.Linear(in_features=c_img_dim, bias=False)
+        self.e_img = nn.Linear(in_features=c_img_dim, bias=False)
 
-    def forward(self, tgt, memory,
-                tgt_mask: Optional[Tensor] = None,
-                memory_mask: Optional[Tensor] = None,
-                tgt_key_padding_mask: Optional[Tensor] = None,
-                memory_key_padding_mask: Optional[Tensor] = None,
-                pos: Optional[Tensor] = None,
-                query_pos: Optional[Tensor] = None):
-        output = tgt
+    def forward(self, input_c_txt, input_c_img, input_s_t):
+        s_t = self.s_t(input_s_t)
+        c_txt = self.c_txt(input_c_txt)
+        e_txt = self.e_txt(torch.sum(s_t, c_txt))
+        a_txt = F.softmax(e_txt)
 
-        intermediate = []
+        c_img = self.c_img(input_c_img)
+        e_img = self.e_img(torch.sum(s_t, c_img))
+        a_img = F.softmax(e_img)
 
-        for layer in self.layers:
-            output = layer(output, memory, tgt_mask=tgt_mask,
-                           memory_mask=memory_mask,
-                           tgt_key_padding_mask=tgt_key_padding_mask,
-                           memory_key_padding_mask=memory_key_padding_mask,
-                           pos=pos, query_pos=query_pos)
-            if self.return_intermediate:
-                intermediate.append(self.norm(output))
+        c_mm = torch.sum(torch.mul(a_txt,c_txt), torch.mul(a_img, c_img))
 
-        if self.norm is not None:
-            output = self.norm(output)
-            if self.return_intermediate:
-                intermediate.pop()
-                intermediate.append(output)
-
-        if self.return_intermediate:
-            return torch.stack(intermediate)
-
-        return output
+        return c_mm
 
 
+class ReduceState(nn.Module):
+    def __init__(self):
+        super(ReduceState, self).__init__()
 
-# TODO (ly, 20206023): MSMO
-class Transformer(nn.Module):
+        self.reduce_h = nn.Linear(config.hidden_dim * 2, config.hidden_dim)
+        init_linear_wt(self.reduce_h)
+        self.reduce_c = nn.Linear(config.hidden_dim * 2, config.hidden_dim)
+        init_linear_wt(self.reduce_c)
 
-    def __init__(self, d_model=512, nhead=8, num_encoder_layers=6,
-                 num_decoder_layers=6, dim_feedforward=2048, dropout=0.1,
-                 activation="relu", normalize_before=False,
-                 return_intermediate_dec=False):
-        super().__init__()
+    def forward(self, hidden):
 
-        encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward,
-                                                dropout, activation, normalize_before)
-        encoder_norm = nn.LayerNorm(d_model) if normalize_before else None
-        self.encoder = TransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
+        h, c = hidden  # h, c dim = 2 x b x hidden_dim
 
-        decoder_layer = TransformerDecoderLayer(d_model, nhead, dim_feedforward,
-                                                dropout, activation, normalize_before)
-        decoder_norm = nn.LayerNorm(d_model)
-        self.decoder = TransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm,
-                                          return_intermediate=return_intermediate_dec)
+        """
+        x = x.transpose(1, 2).contiguous().view(batch_size, -1, head * d_k)
+        输入的x的形状为[batch size, head, 句子最大长度max_len, d_k]，
+        先执行x.transpose(1, 2)后变换为[batch size, 句子最大长度max_len, head, d_k]，
+        然后因为先执行transpose后执行view的话，两者中间先要执行contiguous，
+        把经过了transpose或t()操作的tensor重新处理为具有内存连续的有相同数据的tensor，
+        最后才能执行view(batch_size, -1, head * d_k) 把 [batch size, 句子最大长度max_len, head, d_k]
+        变换为 [batch size, 句子最大长度max_len, embedding_dim词向量维度]，head * d_k 等于 embedding_dim词向量维度。
+        """
 
-        self._reset_parameters()
+        h_in = h.transpose(0, 1).contiguous().view(-1, config.hidden_dim * 2)
+        hidden_reduced_h = F.relu(self.reduce_h(h_in))
+        c_in = c.transpose(0, 1).contiguous().view(-1, config.hidden_dim * 2)
+        hidden_reduced_c = F.relu(self.reduce_c(c_in))
 
-        self.d_model = d_model
-        self.nhead = nhead
-
-    def _reset_parameters(self):
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
-
-    def forward(self, src, mask, query_embed, pos_embed):
-        # flatten NxCxHxW to HWxNxC
-        bs, c, h, w = src.shape
-        src = src.flatten(2).permute(2, 0, 1)
-        pos_embed = pos_embed.flatten(2).permute(2, 0, 1)
-        query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
-        mask = mask.flatten(1)
-
-        tgt = torch.zeros_like(query_embed)
-        memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)
-        hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
-                          pos=pos_embed, query_pos=query_embed)
-        return hs.transpose(1, 2), memory.permute(1, 2, 0).view(bs, c, h, w)
-
-def build_transformer(args):
-    return Transformer(
-        d_model=args.hidden_dim,
-        dropout=args.dropout,
-        nhead=args.nheads,
-        dim_feedforward=args.dim_feedforward,
-        num_encoder_layers=args.enc_layers,
-        num_decoder_layers=args.dec_layers,
-        normalize_before=args.pre_norm,
-        return_intermediate_dec=True,
-    )
+        return (hidden_reduced_h.unsqueeze(0), hidden_reduced_c.unsqueeze(0))  # h, c dim = 1 x b x hidden_dim
 
 
-# TODO (ly, 20200622): train model
-# optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-# loss_func = nn.CrossEntropyLoss()
-# print(model)
-# Loss_list = []
-# Accuracy_list = []
-# for epoch in range(100):
-#     print('epoch {}'.format(epoch + 1))
-#     # training-----------------------------
-#     train_loss = 0.
-#     train_acc = 0.
-#     for batch_x, batch_y in train_dataloader:
-#         batch_x, batch_y = Variable(batch_x).cuda(), Variable(batch_y).cuda()
-#         out = model(batch_x)
-#         loss = loss_func(out, batch_y)
-#         train_loss += loss.data[0]
-#         pred = torch.max(out, 1)[1]
-#         train_correct = (pred == batch_y).sum()
-#         train_acc += train_correct.data[0]
-#         optimizer.zero_grad()
-#         loss.backward()
-#         optimizer.step()
-#     print('Train Loss: {:.6f}, Acc: {:.6f}'.format(train_loss / (len(
-#         train_datasets)), train_acc / (len(train_datasets))))
-#
-#     # evaluation--------------------------------
-#     model.eval()
-#     eval_loss = 0.
-#     eval_acc = 0.
-#     for batch_x, batch_y in val_dataloader:
-#         batch_x, batch_y = Variable(batch_x, volatile=True).cuda(), Variable(batch_y, volatile=True).cuda()
-#         out = model(batch_x)
-#         loss = loss_func(out, batch_y)
-#         eval_loss += loss.data[0]
-#         pred = torch.max(out, 1)[1]
-#         num_correct = (pred == batch_y).sum()
-#         eval_acc += num_correct.data[0]
-#     print('Test Loss: {:.6f}, Acc: {:.6f}'.format(eval_loss / (len(
-#         val_datasets)), eval_acc / (len(val_datasets))))
-#
-#     Loss_list.append(eval_loss / (len(val_datasets)))
-# Accuracy_list.append(100 * eval_acc / (len(val_datasets)))
-#
-# x1 = range(0, 100)
-# x2 = range(0, 100)
-# y1 = Accuracy_list
-# y2 = Loss_list
-# plt.subplot(2, 1, 1)
-# plt.plot(x1, y1, 'o-')
-# plt.title('Test accuracy vs. epoches')
-# plt.ylabel('Test accuracy')
-# plt.subplot(2, 1, 2)
-# plt.plot(x2, y2, '.-')
-# plt.xlabel('Test loss vs. epoches')
-# plt.ylabel('Test loss')
-# plt.show()
+class txt_attention(nn.Module):
+    def __init__(self):
+        super(txt_attention, self).__init__()
+        # attention
+        if config.is_coverage:
+            self.W_c = nn.Linear(1, config.hidden_dim * 2, bias=False)
 
-# TODO (ly, 20200622): test
+        self.decode_proj = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2)
+        self.v = nn.Linear(config.hidden_dim * 2, 1, bias=False)
+
+    def forward(self, s_t_hat, encoder_outputs, encoder_feature, enc_padding_mask, coverage):
+        b, t_k, n = list(encoder_outputs.size())
+
+        dec_fea = self.decode_proj(s_t_hat)  # B x 2*hidden_dim
+        dec_fea_expanded = dec_fea.unsqueeze(1).expand(b, t_k, n).contiguous()  # B x t_k x 2*hidden_dim
+        dec_fea_expanded = dec_fea_expanded.view(-1, n)  # B * t_k x 2*hidden_dim
+
+        att_features = encoder_feature + dec_fea_expanded  # B * t_k x 2*hidden_dim
+
+        if config.is_coverage:
+            coverage_input = coverage.view(-1, 1)  # B * t_k x 1
+            coverage_feature = self.W_c(coverage_input)  # B * t_k x 2*hidden_dim
+            att_features = att_features + coverage_feature
+
+        e = F.tanh(att_features)  # B * t_k x 2*hidden_dim
+        scores = self.v(e)  # B * t_k x 1
+        scores = scores.view(-1, t_k)  # B x t_k
+
+        attn_dist_ = F.softmax(scores, dim=1) * enc_padding_mask  # B x t_k
+        normalization_factor = attn_dist_.sum(1, keepdim=True)
+        attn_dist = attn_dist_ / normalization_factor
+
+        attn_dist = attn_dist.unsqueeze(1)  # B x 1 x t_k
+        # 矩阵相乘
+        c_t = torch.bmm(attn_dist, encoder_outputs)  # B x 1 x n
+        c_t = c_t.view(-1, config.hidden_dim * 2)  # B x 2*hidden_dim
+
+        attn_dist = attn_dist.view(-1, t_k)  # B x t_k
+
+        if config.is_coverage:
+            coverage = coverage.view(-1, t_k)
+            coverage = coverage + attn_dist
+
+        return c_t, attn_dist, coverage
+
+
+class Decoder(nn.Module):
+    def __init__(self):
+        super(Decoder, self).__init__()
+        self.attention_network = txt_attention()
+        # decoder
+        self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
+        init_wt_normal(self.embedding.weight)
+
+        self.x_context = nn.Linear(config.hidden_dim * 2 + config.emb_dim, config.emb_dim)
+
+        self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
+        init_lstm_wt(self.lstm)
+
+        if config.pointer_gen:
+            self.p_gen_linear = nn.Linear(config.hidden_dim * 4 + config.emb_dim, 1)
+
+        # p_vocab
+        self.out1 = nn.Linear(config.hidden_dim * 3, config.hidden_dim)
+        self.out2 = nn.Linear(config.hidden_dim, config.vocab_size)
+        init_linear_wt(self.out2)
+
+    def forward(self, y_t_1, s_t_1, encoder_outputs, encoder_feature, enc_padding_mask,
+                c_t_1, extra_zeros, enc_batch_extend_vocab, coverage, step):
+
+        if not self.training and step == 0:
+            h_decoder, c_decoder = s_t_1
+            s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
+                                 c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
+            c_t, _, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
+                                                           enc_padding_mask, coverage)
+            coverage = coverage_next
+
+        y_t_1_embd = self.embedding(y_t_1)
+        x = self.x_context(torch.cat((c_t_1, y_t_1_embd), 1))
+        lstm_out, s_t = self.lstm(x.unsqueeze(1), s_t_1)
+
+        h_decoder, c_decoder = s_t
+        # 横向拼接
+        s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
+                             c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
+
+        c_t, attn_dist, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
+                                                               enc_padding_mask, coverage)
+
+        if self.training or step > 0:
+            coverage = coverage_next
+
+        p_gen = None
+        if config.pointer_gen:
+            p_gen_input = torch.cat((c_t, s_t_hat, x), 1)  # B x (2*2*hidden_dim + emb_dim)
+            p_gen = self.p_gen_linear(p_gen_input)
+            p_gen = F.sigmoid(p_gen)
+
+        output = torch.cat((lstm_out.view(-1, config.hidden_dim), c_t), 1)  # B x hidden_dim * 3
+        output = self.out1(output)  # B x hidden_dim
+
+        # output = F.relu(output)
+
+        output = self.out2(output)  # B x vocab_size
+        vocab_dist = F.softmax(output, dim=1)
+
+        if config.pointer_gen:
+            vocab_dist_ = p_gen * vocab_dist
+            attn_dist_ = (1 - p_gen) * attn_dist
+
+            if extra_zeros is not None:
+                vocab_dist_ = torch.cat([vocab_dist_, extra_zeros], 1)
+
+            final_dist = vocab_dist_.scatter_add(1, enc_batch_extend_vocab, attn_dist_)
+        else:
+            final_dist = vocab_dist
+
+        return final_dist, s_t, c_t, attn_dist, p_gen, coverage
+
+
+class Model(object):
+    def __init__(self, model_file_path=None, is_eval=False):
+        encoder = txt_encoder()
+        decoder = Decoder()
+        reduce_state = ReduceState()
+
+        # shared the embedding between encoder and decoder
+        decoder.embedding.weight = encoder.embedding.weight
+        # 不进行梯度回传，只进行向前计算
+        if is_eval:
+            encoder = encoder.eval()
+            decoder = decoder.eval()
+            reduce_state = reduce_state.eval()
+
+        if use_cuda:
+            encoder = encoder.cuda()
+            decoder = decoder.cuda()
+            reduce_state = reduce_state.cuda()
+
+        self.encoder = encoder
+        self.decoder = decoder
+        self.reduce_state = reduce_state
+        # 如果存在模型路径的话，就直接导入模型
+        if model_file_path is not None:
+            state = torch.load(model_file_path, map_location=lambda storage, location: storage)
+            self.encoder.load_state_dict(state['encoder_state_dict'])
+            self.decoder.load_state_dict(state['decoder_state_dict'], strict=False)
+            self.reduce_state.load_state_dict(state['reduce_state_dict'])

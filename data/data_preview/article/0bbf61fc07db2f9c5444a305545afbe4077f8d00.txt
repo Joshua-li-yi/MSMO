@@ -1,0 +1,33 @@
+@title
+Obesity and high blood pressure in your 50s dramatically increase your risk of Alzheimer 's , 25-year study reveals
+
+@body
+Obesity , high blood pressure , and high cholesterol levels in your 50s significantly increase your risk of developing Alzheimer 's , a 26-year study reveals .
+Researchers at Johns Hopkins University School of Medicine tracked the vascular health of 346 people between 1987 and 2013 , while scanning their brain to check for amyloid plaques - protein fragments linked to the brain disease .
+The final PET brain scans revealed that the participants who had more vascular issues in their 50s ended up with elevated levels of brain amyloid in later in life .
+The increased risk was the same across all races . Above all , a high-than-average body mass index was found to be the significant risk factor linked with the terminal neurodegenerative disease .
+Those who managed to stave off blood pressure issues until after the age of 64 had a far lower risk of developing the disease .
+` These data support the concept that midlife , but not late-life , exposure to these vascular risk factors is important for amyloid deposition , ' Dr Rebecca F. Gottesman write in the study .
+` These findings are consistent with a role of vascular disease in the development of AD . '
+
+The participants entered the study with an average age of 52 , and ended with an average age of 76 years old .
+Their vascular risk factors were assessed on entry - including body mass index of 30 or greater , smoking habits , hypertension , diabetes , and total cholesterol of 200 mg/dL or greater .
+The data were adjusted according to age , sex , race , gene expression , and educational level .
+None of them had dementia on starting the study .
+The researchers found that a cumulative number of midlife vascular risk factors were associated with elevated levels of beta-amyloid plaques .
+These tangles tend to develop in the parts of the brain that play a role in visual recognition and memory .
+
+The researchers are now analyzing whether those who did end up with more amyloid plaque were genetically predisposed to do so .
+
+@summary
+Researchers at Johns Hopkins University School of Medicine tracked the vascular health of 346 people between 1987 and 2013
+
+@summary
+At the end , they scanned their brains for amyloids linked to Alzheimer 's
+
+@summary
+Those with poor vascular health in their 50s had elevated levels of amyloids
+
+@summary
+The most significant impact of all risk factors came from obesity
+
