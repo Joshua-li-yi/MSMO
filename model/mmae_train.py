@@ -11,7 +11,6 @@ import time
 import shutil
 
 import torch
-
 import data_util.data
 from vocab import Vocabulary  # NOQA
 from model.mmae import VSE

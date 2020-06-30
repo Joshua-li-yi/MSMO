@@ -198,6 +198,10 @@ class Batcher(object):
             self._watch_thread.start()
 
     def next_batch(self):
+        """
+        获取下一个batch的数据
+        :return batch: batch
+        """
         # If the batch queue is empty, print a warning
         if self._batch_queue.qsize() == 0:
             tf.logging.warning(
@@ -262,6 +266,7 @@ class Batcher(object):
                 self._batch_queue.qsize(), self._example_queue.qsize())
 
             time.sleep(60)
+
             for idx, t in enumerate(self._example_q_threads):
                 if not t.is_alive():  # if the thread is dead
                     tf.logging.error('Found example queue thread dead. Restarting.')
@@ -269,6 +274,7 @@ class Batcher(object):
                     self._example_q_threads[idx] = new_t
                     new_t.daemon = True
                     new_t.start()
+
             for idx, t in enumerate(self._batch_q_threads):
                 if not t.is_alive():  # if the thread is dead
                     tf.logging.error('Found batch queue thread dead. Restarting.')
@@ -288,6 +294,7 @@ class Batcher(object):
             except ValueError:
                 tf.logging.error('Failed to get article or abstract from example')
                 continue
+
             if len(article_text) == 0:  # See https://github.com/abisee/pointer-generator/issues/1
                 # tf.logging.warning('Found an example with empty article text. Skipping it.')
                 continue

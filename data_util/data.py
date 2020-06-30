@@ -98,7 +98,7 @@ class Vocab(object):
 
 def example_generator(data_path, single_pass=True):
     """
-
+    生成器
     :param data_path: 读取数据的路径
     :param single_pass: 是否按顺序读取文件，默认为True
     :return:
@@ -112,6 +112,7 @@ def example_generator(data_path, single_pass=True):
         else:
             random.shuffle(filelist)
 
+        # TODO(ly, 20200630): 读懂数据读取这一块儿
         for f in filelist:
             reader = open(f, 'rb')
             while True:
@@ -119,7 +120,11 @@ def example_generator(data_path, single_pass=True):
                 if not len_bytes: break  # finished reading this file
                 str_len = struct.unpack('q', len_bytes)[0]
                 example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+
                 yield example_pb2.Example.FromString(example_str)
+        else:
+            print("example_generator completed reading all datafiles. No more data.")
+
         if single_pass:
             print("example_generator completed reading all datafiles. No more data.")
             break
@@ -293,15 +298,16 @@ def get_paths(path, name='coco', use_restval=False):
 
 
 class CocoDataset(data.Dataset):
-    """COCO Custom Dataset compatible with torch.utils.data.DataLoader."""
-
+    """
+    COCO Custom Dataset compatible with torch.utils.data.DataLoader.
+    """
     def __init__(self, root, json, vocab, transform=None, ids=None):
         """
-        Args:
-            root: image directory.
-            json: coco annotation file path.
-            vocab: vocabulary wrapper.
-            transform: transformer for image.
+        :param root: str image directory.
+        :param json: str coco annotation file path.
+        :param vocab: vocab vocabulary wrapper.
+        :param transform: bool transformer for image.
+        :param ids:
         """
         self.root = root
         # when using `restval`, two json files are needed

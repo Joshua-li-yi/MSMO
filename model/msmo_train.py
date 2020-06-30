@@ -45,7 +45,7 @@ class Train(object):
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
 
-        self.summary_writer = tf.summary.FileWriter(train_dir)
+        # self.summary_writer = tf.summary.FileWriter(train_dir)
 
     def save_model(self, running_avg_loss, iter):
         state = {
@@ -142,16 +142,21 @@ class Train(object):
             batch = self.batcher.next_batch()
             loss = self.train_one_batch(batch)
 
-            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
+            # running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
+            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, iter)
             iter += 1
 
-            if iter % 100 == 0:
-                self.summary_writer.flush()
+            # 每迭代100log更新一次
+            # if iter % 100 == 0:
+            #     self.summary_writer.flush()
+            # 间隔多少次打印一次
+
             print_interval = 1000
             if iter % print_interval == 0:
                 print('steps %d, seconds for %d batch: %.2f , loss: %f' % (iter, print_interval,
                                                                            time.time() - start, loss))
                 start = time.time()
+
             if iter % 5000 == 0:
                 self.save_model(running_avg_loss, iter)
 
