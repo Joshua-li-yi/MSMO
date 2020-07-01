@@ -19,10 +19,10 @@ word_id_path = os.path.join(root_dir,r'data/data_preview/word_id.csv')
 
 log_root = os.path.join(root_dir, "log")
 
-train_caption_path = os.path.join(root_dir, r'data/data_preview/caption')
-train_img_path = os.path.join(root_dir, r'data/data_preview/img')
-train_article_path = os.path.join(root_dir, r'data/data_preview/article/*.txt')
-train_url_path = os.path.join(root_dir, r'data/data_preview/url')
+train_caption_path = os.path.join(root_dir, r'data/data_preview/caption/')
+train_img_path = os.path.join(root_dir, r'data/data_preview/img/')
+train_article_path = os.path.join(root_dir, r'data/data_preview/article/')
+train_url_path = os.path.join(root_dir, r'data/data_preview/url/')
 
 # Hyperparameters
 hidden_dim = 256

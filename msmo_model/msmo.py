@@ -75,7 +75,7 @@ class txt_encoder(nn.Module):
 
         # embedding层正太分布初始化
         init_wt_normal(self.embedding.weight)
-        
+
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=True)
         # 自定义lstm初始化方案
         init_lstm_wt(self.lstm)
@@ -115,6 +115,7 @@ class img_encoder(nn.Module):
 
     def forward(self, input):
         """
+        # FIXME (ly, 20200701): 是输入的batch size张图片还是一张？？向量是归一化之后的还是生图？？
         :param input: 输入一张图片
         :return global_features: 全局特征 4096 dimensions
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
