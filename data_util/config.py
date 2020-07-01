@@ -7,14 +7,14 @@
 
 import os
 
-root_dir = r'D:/GitHub project/MSMO/'
+root_dir = r'D:/githubProject/MSMO/'
 
 #train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
 train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/chunked/train_*")
 eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
-
-vocab_path = os.path.join(root_dir, r"data/vocab")
+# vocab的路径
+vocab_path = os.path.join(root_dir, r"data/data_preview/finished_files/vocab.txt")
 
 log_root = os.path.join(root_dir, "log")
 
