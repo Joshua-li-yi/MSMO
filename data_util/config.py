@@ -10,11 +10,12 @@ import os
 root_dir = r'D:/githubProject/MSMO/'
 
 #train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
-train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/chunked/train_*")
+train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train.bin")
 eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
 # vocab的路径
 vocab_path = os.path.join(root_dir, r"data/data_preview/finished_files/vocab.txt")
+word_id_path = os.path.join(root_dir,r'data/data_preview/word_id.csv')
 
 log_root = os.path.join(root_dir, "log")
 
@@ -51,7 +52,7 @@ eps = 1e-12
 # 训练的最大迭代次数
 max_iterations = 500000
 # 是否使用cuda加速
-use_gpu = True
+use_gpu = False
 
 lr_coverage = 0.15
 # 随机种子
@@ -63,3 +64,4 @@ img_attention_model = img_attention_models[0]
 # MMAE模型的选择
 methods = ['LR', 'Logis', 'MLP']
 method = methods[0]
+modle_path = ''

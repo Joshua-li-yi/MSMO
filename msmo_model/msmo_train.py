@@ -11,10 +11,11 @@ import torch
 import torch.optim
 from torch.nn.utils import clip_grad_norm_
 from data_util import config
-import model
+from msmo_model.msmo import Model
 from data_util.batcher import Batcher
 from data_util.data import Vocab
 from data_util.utils import calc_running_avg_loss
+from msmo_model.train_util import get_input_from_batch, get_output_from_batch
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -32,7 +33,7 @@ class Train(object):
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
         print('time sleep ...')
-        time.sleep(1)
+        time.sleep(15)
         print('time sleep end')
         train_dir = os.path.join(config.log_root, '/train_%d' % (int(time.time())))
 
@@ -49,7 +50,9 @@ class Train(object):
     def save_model(self, running_avg_loss, iter):
         state = {
             'iter': iter,
-            'encoder_state_dict': self.model.encoder.state_dict(),
+            'txt_encode_state_dict': self.model.txt_encode.state_dict(),
+            # FIXME (ly, 20200701): 可能不用保存img encode的参数
+            'img_encode_state_dict': self.model.img_encode.state_dict(),
             'decoder_state_dict': self.model.decoder.state_dict(),
             'reduce_state_dict': self.model.reduce_state.state_dict(),
             'optimizer': self.optimizer.state_dict(),
@@ -59,10 +62,10 @@ class Train(object):
         torch.save(state, model_save_path)
 
     def setup_train(self, model_file_path=None):
-        self.model = model.msmo.Model(model_file_path)
+        self.model = Model(model_file_path)
 
-        params = list(self.model.encoder.parameters()) + list(self.model.decoder.parameters()) + \
-                 list(self.model.reduce_state.parameters())
+        params = list(self.model.txt_encode.parameters()) + list(self.model.decoder.parameters()) + \
+                 list(self.model.reduce_state.parameters() + list(self.model.img_encode.parameters()))
 
         initial_lr = config.lr_coverage if config.is_coverage else config.lr
 
@@ -87,9 +90,9 @@ class Train(object):
 
     def train_one_batch(self, batch):
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage = \
-            model.train_util.get_input_from_batch(batch, use_cuda)
+            get_input_from_batch(batch, use_cuda)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
-            model.train_util.get_output_from_batch(batch, use_cuda)
+            get_output_from_batch(batch, use_cuda)
 
         self.optimizer.zero_grad()
 
@@ -138,28 +141,30 @@ class Train(object):
         iter, running_avg_loss = self.setup_train(model_file_path)
         start = time.time()
         while iter < n_iters:
+            iter += 1
+            print('%i iters...' % iter)
             batch = self.batcher.next_batch()
+            print('train one batch...')
             loss = self.train_one_batch(batch)
-
+            print('calc_running_avg_loss...')
             # running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
             running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, iter)
-            iter += 1
 
             # 每迭代100log更新一次
             # if iter % 100 == 0:
             #     self.summary_writer.flush()
             # 间隔多少次打印一次
 
-            print_interval = 1000
+            print_interval = 1
             if iter % print_interval == 0:
-                print('steps %d, seconds for %d batch: %.2f , loss: %f' % (iter, print_interval,
+                print('steps %d, seconds for %d batch: %.2f s , loss: %f' % (iter, print_interval,
                                                                            time.time() - start, loss))
                 start = time.time()
 
-            if iter % 5000 == 0:
+            if iter % 50 == 0:
                 self.save_model(running_avg_loss, iter)
 
 
 if __name__ == '__main__':
     train_processor = Train()
-    train_processor.trainIters(config.max_iterations, config.modle_path)
+    train_processor.trainIters(config.max_iterations)

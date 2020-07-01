@@ -40,10 +40,10 @@ class Vocab(object):
             self._count += 1
 
         # Read the vocab file and add words up to max_size
-        with open(vocab_file, 'r') as vocab_f:
+        with open(vocab_file, 'r', encoding='utf-8') as vocab_f:
             for line in vocab_f:
                 pieces = line.split()
-
+                # print(pieces)
                 if len(pieces) != 2:
                     print('Warning: incorrectly formatted line in vocabulary file: %s\n' % line)
                     continue
@@ -89,9 +89,10 @@ class Vocab(object):
         :return:
         """
         print("Writing word embedding metadata file to %s..." % (fpath))
-        with open(fpath, "w") as f:
+        with open(fpath, "w", encoding='utf-8') as f:
             fieldnames = ['word']
-            writer = csv.DictWriter(f, delimiter="\t", fieldnames=fieldnames)
+            writer = csv.DictWriter(f, delimiter=",", fieldnames=fieldnames)
+
             for i in range(self.size()):
                 writer.writerow({"word": self._id_to_word[i]})
 
@@ -185,6 +186,14 @@ def abstract2sents(abstract):
     sents = []
     while True:
         try:
+            # print(SENTENCE_START)
+            # print(type(SENTENCE_START))
+            # print(abstract)
+            abstract = str(abstract)
+            # print(abstract)
+            # print(cur)
+            # print(type(cur))
+            # 查找<s> </s>首次出现的位置
             start_p = abstract.index(SENTENCE_START, cur)
             end_p = abstract.index(SENTENCE_END, start_p + 1)
             cur = end_p + len(SENTENCE_END)
