@@ -115,21 +115,21 @@ class img_encoder(nn.Module):
 
     def forward(self, input):
         """
-        # FIXME (ly, 20200701): 是输入的batch size张图片还是一张？？向量是归一化之后的还是生图？？
-        :param input: 输入一张图片
+        :param input: 输入的batch size张图片
         :return global_features: 全局特征 4096 dimensions
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
         """
-        print()
-
+        print('------------')
+        print(input.shape)
         local_features = self.local_features_net(input)
-        print("local_features_net size")
-
+        print("local_features_net size", local_features.shape)
         # 维度转化
-        local_features = local_features.view(-1, 521, 49)  # B*49*512
+        # local_features = local_features.view(-1, 521, 49)  # B*49*512
+        local_features = local_features.reshape(-1, 521, 49)
         global_features = self.global_features_net(local_features)
 
         return local_features, global_features
+
 
 
 class img_attention(nn.Module):
@@ -290,11 +290,12 @@ class txt_attention(nn.Module):
 class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
-        self.attention_network = txt_attention()
+        self.txt_attention = txt_attention()
+        self.img_attention = img_attention()
         # decoder
         self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
         init_wt_normal(self.embedding.weight)
-
+        
         self.x_context = nn.Linear(config.hidden_dim * 2 + config.emb_dim, config.emb_dim)
 
         self.lstm = nn.LSTM(config.emb_dim, config.hidden_dim, num_layers=1, batch_first=True, bidirectional=False)
@@ -315,20 +316,20 @@ class Decoder(nn.Module):
             h_decoder, c_decoder = s_t_1
             s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
                                  c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
-            c_t, _, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
+            c_t, _, coverage_next = self.txt_attention(s_t_hat, encoder_outputs, encoder_feature,
                                                            enc_padding_mask, coverage)
             coverage = coverage_next
 
         y_t_1_embd = self.embedding(y_t_1)
         x = self.x_context(torch.cat((c_t_1, y_t_1_embd), 1))
         lstm_out, s_t = self.lstm(x.unsqueeze(1), s_t_1)
-
+        
         h_decoder, c_decoder = s_t
         # 横向拼接
         s_t_hat = torch.cat((h_decoder.view(-1, config.hidden_dim),
                              c_decoder.view(-1, config.hidden_dim)), 1)  # B x 2*hidden_dim
 
-        c_t, attn_dist, coverage_next = self.attention_network(s_t_hat, encoder_outputs, encoder_feature,
+        c_t, attn_dist, coverage_next = self.txt_attention(s_t_hat, encoder_outputs, encoder_feature,
                                                                enc_padding_mask, coverage)
 
         if self.training or step > 0:

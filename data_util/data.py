@@ -9,6 +9,8 @@ import glob
 import random
 import struct
 import csv
+from torchvision import transforms
+import cv2
 import ujson
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
@@ -106,36 +108,10 @@ def example_generator(data_path, single_pass=True):
     with open(data_path, 'r') as f:
         train_data = ujson.load(f)
     for train in train_data:
-        print(train['article'], train['abstract'], train['imgs'])
+        # print(train['article'], train['abstract'], train['imgs'])
 
         yield train['article'], train['abstract'], train['imgs']
 
-    # while True:
-    #     filelist = glob.glob(data_path)  # get the list of datafiles
-    #     assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
-    #
-    #     if single_pass:
-    #         filelist = sorted(filelist)
-    #     else:
-    #         random.shuffle(filelist)
-    #
-    #
-    #     # TODO(ly, 20200630): 读懂数据读取这一块儿
-    #     for f in filelist:
-    #         reader = open(f, 'rb')
-    #         while True:
-    #             len_bytes = reader.read(8)
-    #             if not len_bytes: break  # finished reading this file
-    #             str_len = struct.unpack('q', len_bytes)[0]
-    #             example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
-    #
-    #             yield example_pb2.Example.FromString(example_str)
-    #     else:
-    #         print("example_generator completed reading all datafiles. No more data.")
-    #
-    #     if single_pass:
-    #         print("example_generator completed reading all datafiles. No more data.")
-    #         break
 
 
 def article2ids(article_words, vocab):
@@ -234,6 +210,50 @@ def show_abs_oovs(abstract, vocab, article_oovs):
             new_words.append(w)
     out_str = ' '.join(new_words)
     return out_str
+
+
+class image_data(object):
+    """
+    A PyTorch dataset class to be used in the PyTorch DataLoader to create batches.
+
+    Member variables:
+    self.image_paths (2D list) : A 2D list containing image paths of all the videos.
+                                 The first index represents the video, and the
+                                 second index represents the keyframe.
+    self.num_videos (int) : The total number of videos across courses in the dataset.
+
+    """
+    def __init__(self, imgs_path):
+        """
+        :param imgs_path: list
+        """
+        self.imgs_path = imgs_path
+
+    def get_num(self):
+        return len(self.imgs_path)
+
+    def process_imgs(self,height=644, wight=444):
+        imgs = []
+        for img_path in self.imgs_path:
+            img = Image.open(img_path)
+            # print(img)
+            img = img.resize((wight,height), Image.BILINEAR)
+            # 1.PIL转为tensor
+            transform = transforms.ToTensor()
+            tensor = transform(img)
+            img_transforms = tensor/255
+            # 2.对图像增加随机翻转，随机剪切操作
+            # img_transforms = transforms.Compose([
+            #     transforms.RandomResizedCrop((633,444)),
+            #     transforms.RandomHorizontalFlip(),
+            #     transforms.ToTensor(),
+            #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+            # ])
+            # print(img_transforms)
+            img_transforms = img_transforms.view(-1,3)
+            # print(img_transforms.shape)
+            imgs.append(img_transforms)
+        return imgs
 
 # ------------------------------MMAE-----------------------
 import torch

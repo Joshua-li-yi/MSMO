@@ -21,10 +21,12 @@ random.seed(config.SEED)
 
 class Example(object):
 
-    def __init__(self, article, abstract_sentences, vocab):
+    def __init__(self, article, abstract_sentences, vocab, imgs_path):
         # Get ids of special tokens
         start_decoding = vocab.word2id(data.START_DECODING)
         stop_decoding = vocab.word2id(data.STOP_DECODING)
+        imgs = data.image_data(imgs_path)
+        imgs = imgs.process_imgs()
 
         # Process the article
         article_words = article.split()
@@ -61,6 +63,7 @@ class Example(object):
         self.original_article = article
         self.original_abstract = abstract
         self.original_abstract_sents = abstract_sentences
+        self.original_imgs = imgs
 
     def get_dec_inp_targ_seqs(self, sequence, max_len, start_id, stop_id):
         inp = [start_id] + sequence[:]
@@ -151,7 +154,7 @@ class Batch(object):
         self.original_articles = [ex.original_article for ex in example_list]  # list of lists
         self.original_abstracts = [ex.original_abstract for ex in example_list]  # list of lists
         self.original_abstracts_sents = [ex.original_abstract_sents for ex in example_list]  # list of list of lists
-
+        self.original_imgs = [ex.original_imgs for ex in example_list]
 
 class Batcher(object):
     BATCH_QUEUE_MAX = 100  # max number of batches the batch_queue can hold
@@ -237,7 +240,7 @@ class Batcher(object):
 
             abstract_sentences = [sent.strip() for sent in data.abstract2sents(
                 abstract)]  # Use the <s> and </s> tags in abstract to get a list of sentences.
-            example = Example(article, abstract_sentences, self._vocab)  # Process into an Example.
+            example = Example(article, abstract_sentences, self._vocab, imgs)  # Process into an Example.
             self._example_queue.put(example)  # place the Example in the example queue.
 
     def fill_batch_queue(self):
@@ -265,9 +268,6 @@ class Batcher(object):
 
     def watch_threads(self):
         while True:
-            # tf.logging.info(
-            #     'Bucket queue size: %i, Input queue size: %i',
-            #     self._batch_queue.qsize(), self._example_queue.qsize())
             print(
                 'Bucket queue size: %i, Input queue size: %i'%(self._batch_queue.qsize(), self._example_queue.qsize()))
 
@@ -297,10 +297,6 @@ class Batcher(object):
                 # python 3.x中将next（）改为了__next__()
                 article_text,abstract_text,imgs = example_generator.__next__()  # e is a tf.Example
 
-                # article_text = e.features.feature['article'].bytes_list.value[
-                #     0]  # the article text was saved under the key 'article' in the data files
-                # abstract_text = e.features.feature['abstract'].bytes_list.value[
-                #     0]  # the abstract text was saved under the key 'abstract' in the data files
             except ValueError:
                 # tf.logging.error('Failed to get article or abstract from example')
                 print('Failed to get article or abstract from example')

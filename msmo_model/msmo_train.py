@@ -64,8 +64,7 @@ class Train(object):
     def setup_train(self, model_file_path=None):
         self.model = Model(model_file_path)
 
-        params = list(self.model.txt_encode.parameters()) + list(self.model.decoder.parameters()) + \
-                 list(self.model.reduce_state.parameters() + list(self.model.img_encode.parameters()))
+        params = list(self.model.txt_encode.parameters()) + list(self.model.decoder.parameters()) + list(self.model.reduce_state.parameters())
 
         initial_lr = config.lr_coverage if config.is_coverage else config.lr
 
@@ -89,15 +88,16 @@ class Train(object):
         return start_iter, start_loss
 
     def train_one_batch(self, batch):
-        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage = \
+        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage,imgs = \
             get_input_from_batch(batch, use_cuda)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, use_cuda)
 
         self.optimizer.zero_grad()
 
-        encoder_outputs, encoder_feature, encoder_hidden = self.model.encoder(enc_batch, enc_lens)
+        encoder_outputs, encoder_feature, encoder_hidden = self.model.txt_encode(enc_batch, enc_lens)
         s_t_1 = self.model.reduce_state(encoder_hidden)
+        img_local_features, img_global_features = self.model.img_encode(imgs)
 
         step_losses = []
         for di in range(min(max_dec_len, config.max_dec_steps)):
@@ -109,6 +109,7 @@ class Train(object):
                                                                                            extra_zeros,
                                                                                            enc_batch_extend_vocab,
                                                                                            coverage, di)
+
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
 
