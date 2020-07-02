@@ -9,8 +9,7 @@ import glob
 import random
 import struct
 import csv
-from tensorflow.core.example import example_pb2
-
+import ujson
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
@@ -104,31 +103,39 @@ def example_generator(data_path, single_pass=True):
     :param single_pass: 是否按顺序读取文件，默认为True
     :return:
     """
-    while True:
-        filelist = glob.glob(data_path)  # get the list of datafiles
-        assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
+    with open(data_path, 'r') as f:
+        train_data = ujson.load(f)
+    for train in train_data:
+        print(train['article'], train['abstract'], train['imgs'])
 
-        if single_pass:
-            filelist = sorted(filelist)
-        else:
-            random.shuffle(filelist)
+        yield train['article'], train['abstract'], train['imgs']
 
-        # TODO(ly, 20200630): 读懂数据读取这一块儿
-        for f in filelist:
-            reader = open(f, 'rb')
-            while True:
-                len_bytes = reader.read(8)
-                if not len_bytes: break  # finished reading this file
-                str_len = struct.unpack('q', len_bytes)[0]
-                example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
-
-                yield example_pb2.Example.FromString(example_str)
-        else:
-            print("example_generator completed reading all datafiles. No more data.")
-
-        if single_pass:
-            print("example_generator completed reading all datafiles. No more data.")
-            break
+    # while True:
+    #     filelist = glob.glob(data_path)  # get the list of datafiles
+    #     assert filelist, ('Error: Empty filelist at %s' % data_path)  # check filelist isn't empty
+    #
+    #     if single_pass:
+    #         filelist = sorted(filelist)
+    #     else:
+    #         random.shuffle(filelist)
+    #
+    #
+    #     # TODO(ly, 20200630): 读懂数据读取这一块儿
+    #     for f in filelist:
+    #         reader = open(f, 'rb')
+    #         while True:
+    #             len_bytes = reader.read(8)
+    #             if not len_bytes: break  # finished reading this file
+    #             str_len = struct.unpack('q', len_bytes)[0]
+    #             example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+    #
+    #             yield example_pb2.Example.FromString(example_str)
+    #     else:
+    #         print("example_generator completed reading all datafiles. No more data.")
+    #
+    #     if single_pass:
+    #         print("example_generator completed reading all datafiles. No more data.")
+    #         break
 
 
 def article2ids(article_words, vocab):

@@ -33,7 +33,7 @@ class Train(object):
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
         print('time sleep ...')
-        time.sleep(15)
+        time.sleep(1)
         print('time sleep end')
         train_dir = os.path.join(config.log_root, '/train_%d' % (int(time.time())))
 

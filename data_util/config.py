@@ -10,7 +10,7 @@ import os
 root_dir = r'D:/githubProject/MSMO/'
 
 #train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
-train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train.bin")
+train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train/train.json")
 eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
 # vocab的路径
@@ -28,7 +28,7 @@ train_url_path = os.path.join(root_dir, r'data/data_preview/url/')
 hidden_dim = 256
 emb_dim = 128
 
-batch_size = 8
+batch_size = 1
 
 max_enc_steps = 400
 max_dec_steps = 100

@@ -10,6 +10,8 @@ import hashlib
 import struct
 import subprocess
 import collections
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
 from tensorflow.core.example import example_pb2
 from data_util import config
 dm_single_close_quote = u'\u2019'  # unicode
@@ -73,7 +75,9 @@ def tokenize_stories(stories_dir, tokenized_stories_dir,url_file, delete_map=Tru
     """Maps a whole directory of .story files to a tokenized version using Stanford CoreNLP Tokenizer"""
     print("Preparing to tokenize %s to %s..." % (stories_dir, tokenized_stories_dir))
     stories = os.listdir(stories_dir)
+    print(stories[:][:-4])
     print(len(stories))
+
     # make IO list file
     url_list = read_text_file(url_file)
     url_hashes = get_url_hashes(url_list)
@@ -164,9 +168,17 @@ def get_art_abs(story_file):
     return article, abstract
 
 
-def write_to_bin(url_file, out_file, make_vocab=False):
+def write_to_bin(url_file, out_file, make_vocab=False, stories_dir=None, imgs_dir=None):
     """Reads the tokenized .story files corresponding to the urls listed in the url_file and writes them to a out_file."""
+    stories = os.listdir(stories_dir)
+    imgs = os.listdir(imgs_dir)
+    article_imgs = {}
+    for story in stories_dir:
+        for img in imgs:
+            if story[:-4] == img[:len(story[:-4])]
 
+    print(stories[:][:-4])
+    print(len(stories))
     print("Making bin file for URLs listed in %s..." % url_file)
     url_list = read_text_file(url_file)
     url_hashes = get_url_hashes(url_list)
@@ -240,7 +252,7 @@ def check_num_articles(stories_dir, num_expected):
 
 if __name__ == '__main__':
     articles_dir = root_dir+r'article'
-
+    imgs_dir = root_dir+r'img'
     # Check the stories directories contain the correct number of .story files
     check_num_articles(articles_dir, num_expected_articles)
 
@@ -254,7 +266,7 @@ if __name__ == '__main__':
     # Read the tokenized stories, do a little postprocessing then write to bin files
     # write_to_bin(all_test_urls, os.path.join(finished_files_dir, "test.bin"))
     # write_to_bin(all_val_urls, os.path.join(finished_files_dir, "val.bin"))
-    write_to_bin(all_train_urls, os.path.join(finished_files_dir, "train.bin"), make_vocab=True)
+    write_to_bin(all_train_urls, os.path.join(finished_files_dir, "train.bin"), make_vocab=True, stories_dir=articles_dir, imgs_dir=imgs_dir)
 
     # Chunk the data. This splits each of train.bin, val.bin and test.bin into smaller chunks, each containing e.g. 1000 examples, and saves them in finished_files/chunks
     # chunk_all()

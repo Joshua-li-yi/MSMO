@@ -8,8 +8,6 @@
 import os
 import pyrouge
 import logging
-import tensorflow as tf
-
 
 def print_results(article, abstract, decoded_output):
     print("")

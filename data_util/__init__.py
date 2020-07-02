@@ -5,8 +5,8 @@
 # @Software: PyCharm
 # @Project: MSMO
  
-from data_util import config
-from data_util.data import example_generator
-
-example_generator(config.train_article_path, single_pass=True)
+# from data_util import config
+# from data_util.data import example_generator
+#
+# example_generator(config.train_article_path, single_pass=True)
 

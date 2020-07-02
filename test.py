@@ -14,7 +14,7 @@ import datetime
 import torch.nn.functional as F
 import torchvision
 from data_util import config
-
+import cv2
 
 #不是import torch.utils.data.Dataset
 from torch.utils.data import Dataset
@@ -95,3 +95,4 @@ images = loadImage()
 for i in images:
     a = Image.open(config.train_img_path + i)
     print(a)
+cv2.resize(src=a, dsize=)
