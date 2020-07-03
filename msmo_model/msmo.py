@@ -12,7 +12,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # 导入配置
 from data_util import config
 from numpy import random
-
+from torchsummary import summary
 # 是否使用cuda加速
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -107,11 +107,16 @@ class img_encoder(nn.Module):
         print('load vgg19...')
         net = models.vgg19(pretrained=False)
         net.load_state_dict(torch.load(r'vgg19.pth'))
-        # FIXME (ly, 20200626): 这里的第几层不是很确定
-        local_features_net = list(net.children())[:-9]
-        global_features_net = list(net.children())[-9:-6]
-        self.global_features_net = nn.Sequential(*global_features_net)
-        self.local_features_net = nn.Sequential(*local_features_net)
+        # FIXME (ly, 20200626): 这里的第几层不是很确定, 但是维度是对的
+        local_features_net = net.features[:37]
+        # global_features_net = nn.Sequential(net.features[37:], net.classifier[:2])
+        global_features_net = net.classifier[:2]
+        self.global_features_net = global_features_net
+        self.local_features_net = local_features_net
+
+        self.local_features_net.eval()
+        self.global_features_net.eval()
+        pass
 
     def forward(self, input):
         """
@@ -119,16 +124,14 @@ class img_encoder(nn.Module):
         :return global_features: 全局特征 4096 dimensions
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l 512 dimensions
         """
-        print('------------')
-        print(input.shape)
-        local_features = self.local_features_net(input)
-        print("local_features_net size", local_features.shape)
-        # 维度转化
-        # local_features = local_features.view(-1, 521, 49)  # B*49*512
-        local_features = local_features.reshape(-1, 521, 49)
-        global_features = self.global_features_net(local_features)
 
-        return local_features, global_features
+        local_features = self.local_features_net(input[0])
+        # 维度转化
+        local_features_output = local_features.view(-1, 512, 49)  # B*49*512
+
+        global_features = self.global_features_net(local_features.view(local_features.size(0),-1))
+
+        return local_features_output, global_features
 
 
 
@@ -139,55 +142,68 @@ class img_attention(nn.Module):
     2 ATL: attention on local features
     3 HAN: hierarchical visual attention on local features
     """
-    def __init__(self, img_attention_model=None, s_t_dim=0, cov_a_dim=0, d_h=0):
+    def __init__(self, img_attention_model=None, s_t_dim=0, cov_a_dim=0, d_h=config.hidden_dim):
         super(img_attention, self).__init__()
         self.img_attention_model = img_attention_model
         global_features_dim = 4096
+
         if img_attention_model == 'ATG':
             self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
-            self.w_g_star = nn.Linear(in_features=global_features_dim, out_features=config.hidden_dim)
+            self.g_star = nn.Linear(in_features=global_features_dim, out_features=d_h)
 
-            self.g_star = nn.Sequential(
-                self.w_g,
-                self.w_g_star,
-            )
-            self.w_a = nn.Linear(in_features=config.hidden_dim, out_features=0)
-            self.e_a = nn.Sequential(
-                nn.Linear(in_features=d_h, out_features=0,bias=False),
-                nn.Linear(in_features=s_t_dim, out_features=0,bias=False),
-            )
+            self.w_g_star = nn.Linear(in_features=d_h, out_features=config.hidden_dim*2, bias=F)
+            self.w_s_t = nn.Linear(in_features=config.hidden_dim, out_features=config.hidden_dim*2, bias=False)
+            self.e_a = nn.Linear(in_features=config.hidden_dim*2, out_features=config.hidden_dim*2,bias=False)
 
         elif img_attention_model == 'ATL':
-            self.g_star = nn.Linear()
+            self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
+            self.g_star = nn.Linear(in_features=global_features_dim, out_features=d_h)
 
+            self.w_g_star = nn.Linear(in_features=d_h, out_features=config.hidden_dim * 2, bias=F)
+            self.w_s_t = nn.Linear(in_features=config.hidden_dim, out_features=config.hidden_dim * 2, bias=False)
+            self.e_a = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.hidden_dim * 2, bias=False)
         elif img_attention_model == 'HAN':
             self.g_star = nn.Linear()
 
-    def forward(self, global_features, local_features, s_t, cov_a):
+    def forward(self, global_features, local_features, s_t, cov_a,coverage_img, c_i):
         if self.img_attention_model == 'ATG':
-            g_star = self.g_star(global_features)
-            e_a = self.e_a(g_star, s_t, cov_a)
-            # F.tanh改为了 torch.tanh
-            e_a = torch.tanh(e_a)
-            alpha_a = torch.softmax(e_a)
-        elif self.img_attention_model == 'ATL':
-            g_star = self.g_star(global_features)
-            e_a = self.e_a(g_star, s_t, cov_a)
-            e_a = torch.tanh(e_a)
+            g_star = self.w_g(global_features)
+            g_star = self.g_star(g_star)
 
+            w_g_star = self.w_g_star(g_star)
+            w_s_t = self.w_s_t(s_t)
+            # F.tanh改为了 torch.tanh
+            e_a = torch.tanh(torch.sum(w_g_star, w_s_t,c_i))
+            e_a = self.e_a(e_a)
             alpha_a = torch.softmax(e_a)
+
+        elif self.img_attention_model == 'ATL':
+            g_star = self.w_g(local_features)
+            g_star = self.g_star(g_star)
+
+            w_g_star = self.w_g_star(g_star)
+            w_s_t = self.w_s_t(s_t)
+            # F.tanh改为了 torch.tanh
+            e_a = torch.tanh(torch.sum(w_g_star, w_s_t,c_i))
+            e_a = self.e_a(e_a)
+            alpha_a = torch.softmax(e_a)
+
         elif self.img_attention_model == 'HAN':
             g_star = self.g_star(global_features)
             e_a = self.e_a(g_star, s_t, cov_a)
             e_a = torch.tanh(e_a)
             alpha_a = torch.softmax(e_a)
+
         c_img = torch.sum(torch.mul(alpha_a, g_star))
-        return c_img
+        coverage_img = coverage_img + alpha_a
+
+        return c_img, coverage_img
 
 
 class multi_attention(nn.Module):
     def __init__(self, c_txt_dim=0, c_img_dim=0, s_t_dim=0):
         super(multi_attention, self).__init__()
+
         self.s_t = nn.Linear(in_features=s_t_dim, bias=False)
         self.c_txt = nn.Linear(in_features=c_txt_dim, bias=False)
         self.e_txt = nn.Linear(in_features=c_txt_dim,bias=False)

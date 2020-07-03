@@ -13,6 +13,7 @@ import time
 import torch
 # 时间使用装饰器
 # 使用时直接在函数前加 @timer
+
 def timer(func):
     def wrapper(*args, **kwargs):
         start = time.time()
@@ -27,7 +28,7 @@ def timer(func):
 def get_input_from_batch(batch, use_cuda):
 
     batch_size = len(batch.enc_lens)
-    imgs = torch.Tensor(batch.original_imgs)
+    imgs = batch.original_imgs
 
     enc_batch = Variable(torch.from_numpy(batch.enc_batch).long())
     enc_padding_mask = Variable(torch.from_numpy(batch.enc_padding_mask)).float()
@@ -43,7 +44,7 @@ def get_input_from_batch(batch, use_cuda):
 
     # 上下文向量初始化为0
     c_t_1 = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
-
+    c_i = Variable(torch.zeros((imgs.shape[0], 2 * config.hidden_dim)))
     # coverage初始化为0
     coverage = None
     if config.is_coverage:
@@ -62,7 +63,7 @@ def get_input_from_batch(batch, use_cuda):
         if coverage is not None:
             coverage = coverage.cuda()
 
-    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, imgs
+    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, imgs,c_i
 
 
 def get_output_from_batch(batch, use_cuda):

@@ -44,8 +44,7 @@ class Train(object):
 
         if not os.path.exists(self.model_dir):
             os.mkdir(self.model_dir)
-
-        # self.summary_writer = tf.summary.FileWriter(train_dir)
+    pass
 
     def save_model(self, running_avg_loss, iter):
         state = {
@@ -88,7 +87,7 @@ class Train(object):
         return start_iter, start_loss
 
     def train_one_batch(self, batch):
-        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage,imgs = \
+        enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage,imgs,c_i = \
             get_input_from_batch(batch, use_cuda)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, use_cuda)
@@ -117,6 +116,7 @@ class Train(object):
             # TODO (ly, 20200627): 需要增加相对于img 的 loss部分
             if config.is_coverage:
                 step_coverage_loss = torch.sum(torch.min(attn_dist, coverage), 1)
+
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss
                 coverage = next_coverage
 
@@ -130,7 +130,7 @@ class Train(object):
 
         loss.backward()
 
-        self.norm = clip_grad_norm_(self.model.encoder.parameters(), config.max_grad_norm)
+        self.norm = clip_grad_norm_(self.model.txt_encode.parameters(), config.max_grad_norm)
         clip_grad_norm_(self.model.decoder.parameters(), config.max_grad_norm)
         clip_grad_norm_(self.model.reduce_state.parameters(), config.max_grad_norm)
 

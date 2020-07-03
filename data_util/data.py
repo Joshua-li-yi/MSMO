@@ -5,13 +5,10 @@
 # @Software: PyCharm
 # @Project: MSMO
 
-import glob
-import random
-import struct
 import csv
 from torchvision import transforms
-import cv2
 import ujson
+from torch.autograd import Variable
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
@@ -85,7 +82,7 @@ class Vocab(object):
 
     def write_metadata(self, fpath):
         """
-
+        输出词汇 对应的id的文件
         :param fpath: 写入词汇文件的路径
         :return:
         """
@@ -108,8 +105,6 @@ def example_generator(data_path, single_pass=True):
     with open(data_path, 'r') as f:
         train_data = ujson.load(f)
     for train in train_data:
-        # print(train['article'], train['abstract'], train['imgs'])
-
         yield train['article'], train['abstract'], train['imgs']
 
 
@@ -165,17 +160,16 @@ def outputids2words(id_list, vocab, article_oovs):
 
 
 def abstract2sents(abstract):
+    """
+    将含有<s> </s>的abstract划分成sentences
+    :param abstract: str
+    :return: sentences
+    """
     cur = 0
     sents = []
     while True:
         try:
-            # print(SENTENCE_START)
-            # print(type(SENTENCE_START))
-            # print(abstract)
             abstract = str(abstract)
-            # print(abstract)
-            # print(cur)
-            # print(type(cur))
             # 查找<s> </s>首次出现的位置
             start_p = abstract.index(SENTENCE_START, cur)
             end_p = abstract.index(SENTENCE_END, start_p + 1)
@@ -232,12 +226,18 @@ class image_data(object):
     def get_num(self):
         return len(self.imgs_path)
 
-    def process_imgs(self,height=644, wight=444):
+    def process_imgs(self, height=224, wight=224):
+        """
+
+        :param height: int
+        :param wight: int
+        :return: imgs_torch: Tensor imgs处理后的tensor
+        """
         imgs = []
         for img_path in self.imgs_path:
             img = Image.open(img_path)
             # print(img)
-            img = img.resize((wight,height), Image.BILINEAR)
+            img = img.resize((wight, height), Image.BILINEAR)
             # 1.PIL转为tensor
             transform = transforms.ToTensor()
             tensor = transform(img)
@@ -249,11 +249,12 @@ class image_data(object):
             #     transforms.ToTensor(),
             #     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             # ])
-            # print(img_transforms)
-            img_transforms = img_transforms.view(-1,3)
-            # print(img_transforms.shape)
+            img_transforms.unsqueeze_(0)
             imgs.append(img_transforms)
-        return imgs
+        imgs_torch = torch.cat(imgs, dim=0)
+        imgs_torch = Variable(imgs_torch)
+        # print(imgs_torch.shape)
+        return imgs_torch
 
 # ------------------------------MMAE-----------------------
 import torch
