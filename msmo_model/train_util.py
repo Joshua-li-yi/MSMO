@@ -44,12 +44,14 @@ def get_input_from_batch(batch, use_cuda):
 
     # 上下文向量初始化为0
     c_t_1 = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
-    c_i = Variable(torch.zeros((imgs.shape[0], 2 * config.hidden_dim)))
+    c_i = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
+
     # coverage初始化为0
     coverage = None
     if config.is_coverage:
         coverage = Variable(torch.zeros(enc_batch.size()))
-
+        # FIXME(20200703): 维度不对
+        coverage_img = Variable(torch.zeros(config.hidden_dim*2))
     if use_cuda:
         enc_batch = enc_batch.cuda()
         enc_padding_mask = enc_padding_mask.cuda()
@@ -63,7 +65,7 @@ def get_input_from_batch(batch, use_cuda):
         if coverage is not None:
             coverage = coverage.cuda()
 
-    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, imgs,c_i
+    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, imgs, c_i, coverage_img
 
 
 def get_output_from_batch(batch, use_cuda):
