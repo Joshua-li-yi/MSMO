@@ -12,8 +12,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # 导入配置
 from data_util import config
 from numpy import random
-from torchsummary import summary
-
+from msmo_model.train_util import tensor_shape
 # 是否使用cuda加速
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -101,7 +100,6 @@ class img_encoder(nn.Module):
     """
     img encode
     """
-
     def __init__(self):
         super(img_encoder, self).__init__()
         # 导入模型结构
@@ -110,11 +108,10 @@ class img_encoder(nn.Module):
         net.load_state_dict(torch.load(r'vgg19.pth'))
         # FIXME (ly, 20200626): 这里的第几层不是很确定, 但是维度是对的
         local_features_net = net.features[:37]
-        # global_features_net = nn.Sequential(net.features[37:], net.classifier[:2])
         global_features_net = net.classifier[:2]
         self.global_features_net = global_features_net
         self.local_features_net = local_features_net
-
+        # 这里不需要再次训练
         self.local_features_net.eval()
         self.global_features_net.eval()
         pass
@@ -156,26 +153,46 @@ class img_attention(nn.Module):
             self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.hidden_dim * 2, bias=False)
             self.e_a = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.hidden_dim * 2, bias=False)
 
+            self.decode_proj = nn.Linear(config.hidden_dim * 2, config.hidden_dim * 2)
+
         elif img_attention_model == 'ATL':
             self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
             self.g_star = nn.Linear(in_features=global_features_dim, out_features=d_h)
 
             self.w_g_star = nn.Linear(in_features=d_h, out_features=config.hidden_dim * 2, bias=F)
             self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.hidden_dim * 2, bias=False)
-            self.e_a = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.hidden_dim * 2, bias=False)
+            self.v = nn.Linear(in_features=config.hidden_dim * 2, out_features=1, bias=False)
         elif img_attention_model == 'HAN':
             self.g_star = nn.Linear()
 
-    def forward(self, global_features, local_features, s_t_hat, coverage_img, c_i):
+    def forward(self, global_features, local_features, s_t_hat, coverage_img, c_i, encoder_outputs):
         if self.img_attention_model == 'ATG':
+            # 2*4096
+            tensor_shape(global_features)
+            # 2*512*49
+            tensor_shape(local_features)
+            # 512
+            tensor_shape(coverage_img)
+            # 1*512
+            tensor_shape(c_i)
+
+            # 1*400*512
+            b, t_k, n = list(encoder_outputs.size())
+
+            dec_fea = self.decode_proj(s_t_hat)  # B x 2*hidden_dim
+            dec_fea_expanded = dec_fea.unsqueeze(1).expand(b, t_k, n).contiguous()  # B x t_k x 2*hidden_dim
+            dec_fea_expanded = dec_fea_expanded.view(-1, n)  # B * t_k x 2*hidden_dim
+
+
             g_star = self.w_g(global_features)
             g_star = self.g_star(g_star)
             w_g_star = self.w_g_star(g_star)
             w_s_t = self.w_s_t(s_t_hat)
             # F.tanh改为了 torch.tanh
-            e_a = torch.tanh(w_g_star + w_s_t + coverage_img)
-            e_a = self.e_a(e_a)
+            e_a = torch.tanh(w_g_star + dec_fea_expanded + coverage_img)
+            e_a = self.v(e_a)
             alpha_a = torch.softmax(e_a, dim=1)
+
         elif self.img_attention_model == 'ATL':
             g_star = self.w_g(local_features)
             g_star = self.g_star(g_star)
@@ -192,25 +209,23 @@ class img_attention(nn.Module):
             e_a = self.e_a(g_star, s_t_hat)
             e_a = torch.tanh(e_a)
             alpha_a = torch.softmax(e_a)
-        # FIXME(2000703): c_img计算有问题
+
         alpha_a = alpha_a.unsqueeze(1)  # B x 1 x t_k
         g_star = g_star.unsqueeze(1)
         print("g_star.shape", g_star.shape)
         print("alpha_a.shape", alpha_a.shape)
         # 矩阵相乘
+        # 矩阵相乘
         c_img = torch.bmm(alpha_a, g_star)  # B x 1 x n
-        print('c_img shape', c_img.shape)
-        c_img = c_img.view(-1, config.hidden_dim * 2)  # B x 2*hidden_dim
 
-        c_img = torch.sum(torch.mul(alpha_a, g_star))
-        print('c_img', c_img.shape)
+        c_img = c_img.view(-1, config.hidden_dim * 2)  # B x 2*hidden_dim
         coverage_img = coverage_img + alpha_a
 
         return c_img, coverage_img, alpha_a
 
 
 class multi_attention(nn.Module):
-    def __init__(self, c_txt_dim=0, c_img_dim=0, s_t_dim=0):
+    def __init__(self):
         super(multi_attention, self).__init__()
 
         self.v_txt = nn.Linear(in_features=config.hidden_dim * 4, out_features=config.hidden_dim * 2, bias=False)
@@ -271,20 +286,24 @@ class txt_attention(nn.Module):
         self.v = nn.Linear(config.hidden_dim * 2, 1, bias=False)
 
     def forward(self, s_t_hat, encoder_outputs, encoder_feature, enc_padding_mask, coverage):
+        # 1*400*512
         b, t_k, n = list(encoder_outputs.size())
 
         dec_fea = self.decode_proj(s_t_hat)  # B x 2*hidden_dim
         dec_fea_expanded = dec_fea.unsqueeze(1).expand(b, t_k, n).contiguous()  # B x t_k x 2*hidden_dim
         dec_fea_expanded = dec_fea_expanded.view(-1, n)  # B * t_k x 2*hidden_dim
+        tensor_shape(encoder_feature)
 
         att_features = encoder_feature + dec_fea_expanded  # B * t_k x 2*hidden_dim
-
+        tensor_shape(att_features)
         if config.is_coverage:
             coverage_input = coverage.view(-1, 1)  # B * t_k x 1
             coverage_feature = self.W_c(coverage_input)  # B * t_k x 2*hidden_dim
             att_features = att_features + coverage_feature
 
         e = torch.tanh(att_features)  # B * t_k x 2*hidden_dim
+        tensor_shape(e)
+
         scores = self.v(e)  # B * t_k x 1
         scores = scores.view(-1, t_k)  # B x t_k
 
@@ -292,12 +311,14 @@ class txt_attention(nn.Module):
         normalization_factor = attn_dist_.sum(1, keepdim=True)
         attn_dist = attn_dist_ / normalization_factor
 
+        # 1*1*400
         attn_dist = attn_dist.unsqueeze(1)  # B x 1 x t_k
         print('attn_dist', attn_dist.shape)
+
         print("encoder_outputs", encoder_outputs.shape)
         # 矩阵相乘
         c_t = torch.bmm(attn_dist, encoder_outputs)  # B x 1 x n
-        print("c_t.shape", c_t.shape)
+
         c_t = c_t.view(-1, config.hidden_dim * 2)  # B x 2*hidden_dim
 
         attn_dist = attn_dist.view(-1, t_k)  # B x t_k
@@ -313,7 +334,9 @@ class Decoder(nn.Module):
     def __init__(self):
         super(Decoder, self).__init__()
         self.txt_attention = txt_attention()
+        # 需要被训练
         self.img_attention = img_attention(img_attention_model=config.img_attention_model)
+        # 需要被训练
         self.multi_attention = multi_attention()
         # decoder
         self.embedding = nn.Embedding(config.vocab_size, config.emb_dim)
@@ -357,7 +380,15 @@ class Decoder(nn.Module):
 
         c_t, attn_dist, coverage_next = self.txt_attention(s_t_hat, encoder_outputs, encoder_feature,
                                                            enc_padding_mask, coverage)
-        print('c_t', c_t.shape)
+        # 1*1*512
+        tensor_shape(c_t)
+        # 1*512
+        tensor_shape(s_t_hat)
+        # 1*400
+        tensor_shape(attn_dist)
+        # 1*400
+        tensor_shape(coverage_next)
+
         c_img, coverage_img_next, attn_img = self.img_attention(golbal_features, local_features, s_t_hat, coverage_img, c_i)
 
         c_mm = self.multi_attention(c_t, c_img, s_t_hat)
@@ -370,11 +401,14 @@ class Decoder(nn.Module):
 
         p_gen = None
         if config.pointer_gen:
-            p_gen_input = torch.cat((c_t, s_t_hat, x), 1)  # B x (2*2*hidden_dim + emb_dim)
+            # p_gen_input = torch.cat((c_t, s_t_hat, x), 1)  # B x (2*2*hidden_dim + emb_dim)
+            # 多模态
+            p_gen_input = torch.cat((c_mm, s_t_hat, x), 1)  # B x (2*2*hidden_dim + emb_dim)
             p_gen = self.p_gen_linear(p_gen_input)
             p_gen = torch.sigmoid(p_gen)
 
-        output = torch.cat((lstm_out.view(-1, config.hidden_dim), c_t), 1)  # B x hidden_dim * 3
+        # output = torch.cat((lstm_out.view(-1, config.hidden_dim), c_t), 1)  # B x hidden_dim * 3
+        output = torch.cat((lstm_out.view(-1, config.hidden_dim), c_mm), 1)  # B x hidden_dim * 3
         output = self.out1(output)  # B x hid   den_dim
 
         # output = F.relu(output)
@@ -392,8 +426,10 @@ class Decoder(nn.Module):
             final_dist = vocab_dist_.scatter_add(1, enc_batch_extend_vocab, attn_dist_)
         else:
             final_dist = vocab_dist
-
-        return final_dist, s_t, c_t, attn_dist, p_gen, coverage, attn_img, coverage_img
+        # TODO (20200703): 这几个参数没用，不传行不行？？？
+        # return final_dist, s_t, c_t, attn_dist, p_gen, coverage, attn_img, coverage_img
+        # TODO(20200703): 加最后的选择图片部分
+        return final_dist, attn_dist, coverage, attn_img, coverage_img
 
 
 class Model(object):
@@ -405,6 +441,7 @@ class Model(object):
 
         # shared the embedding between encoder and decoder
         decoder.embedding.weight = txt_encode.embedding.weight
+
         # 不进行梯度回传，只进行向前计算
         if is_eval:
             txt_encode = txt_encode.eval()

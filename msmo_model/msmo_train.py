@@ -62,6 +62,8 @@ class Train(object):
 
     def setup_train(self, model_file_path=None):
         self.model = Model(model_file_path)
+        # 训练模型
+
 
         params = list(self.model.txt_encode.parameters()) + list(self.model.decoder.parameters()) + list(self.model.reduce_state.parameters())
 
@@ -92,7 +94,7 @@ class Train(object):
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
             get_output_from_batch(batch, use_cuda)
 
-        self.optimizer.zero_grad()
+
 
         encoder_outputs, encoder_feature, encoder_hidden = self.model.txt_encode(enc_batch, enc_lens)
         s_t_1 = self.model.reduce_state(encoder_hidden)
@@ -101,7 +103,15 @@ class Train(object):
         step_losses = []
         for di in range(min(max_dec_len, config.max_dec_steps)):
             y_t_1 = dec_batch[:, di]  # Teacher forcing
-            final_dist, s_t_1, c_t_1, attn_dist, p_gen, next_coverage,attn_img,next_coverage_img = self.model.decoder(y_t_1, s_t_1,
+            # final_dist, s_t_1, c_t_1, attn_dist, p_gen, next_coverage,attn_img,next_coverage_img = self.model.decoder(y_t_1, s_t_1,
+            #                                                                                encoder_outputs,
+            #                                                                                encoder_feature,
+            #                                                                                enc_padding_mask, c_t_1,
+            #                                                                                extra_zeros,
+            #                                                                                enc_batch_extend_vocab,
+            #                                                                                coverage, di, img_global_features, img_local_features, coverage_img,c_i)
+
+            final_dist, attn_dist, next_coverage, attn_img, next_coverage_img = self.model.decoder(y_t_1, s_t_1,
                                                                                            encoder_outputs,
                                                                                            encoder_feature,
                                                                                            enc_padding_mask, c_t_1,
@@ -131,9 +141,10 @@ class Train(object):
         batch_avg_loss = sum_losses / dec_lens_var
         loss = torch.mean(batch_avg_loss)
 
+        self.optimizer.zero_grad()
         loss.backward()
 
-        self.norm = clip_grad_norm_(self.model.txt_encode.parameters(), config.max_grad_norm)
+        clip_grad_norm_(self.model.txt_encode.parameters(), config.max_grad_norm)
         clip_grad_norm_(self.model.decoder.parameters(), config.max_grad_norm)
         clip_grad_norm_(self.model.reduce_state.parameters(), config.max_grad_norm)
 

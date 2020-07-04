@@ -24,6 +24,24 @@ def timer(func):
         return r
     return wrapper
 
+import inspect
+def retrieve_name_ex(var):
+    stacks = inspect.stack()
+    try:
+        callFunc = stacks[1].function
+        code = stacks[2].code_context[0]
+        startIndex = code.index(callFunc)
+        startIndex = code.index("(", startIndex + len(callFunc)) + 1
+        endIndex = code.index(")", startIndex)
+        return code[startIndex:endIndex].strip()
+    except:
+        return ""
+
+
+def tensor_shape(value):
+    print("{} shape:  {}".format(retrieve_name_ex(value), value.shape))
+    pass
+
 
 def get_input_from_batch(batch, use_cuda):
 
@@ -45,13 +63,13 @@ def get_input_from_batch(batch, use_cuda):
     # 上下文向量初始化为0
     c_t_1 = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
     c_i = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
-
+    c_i = c_i.unsqueeze(0)
     # coverage初始化为0
     coverage = None
     if config.is_coverage:
         coverage = Variable(torch.zeros(enc_batch.size()))
-        # FIXME(20200703): 维度不对
-        coverage_img = Variable(torch.zeros(config.hidden_dim*2))
+        coverage_img = Variable(torch.zeros(config.batch_size, enc_batch.size(),2*config.hidden_dim))
+
     if use_cuda:
         enc_batch = enc_batch.cuda()
         enc_padding_mask = enc_padding_mask.cuda()
