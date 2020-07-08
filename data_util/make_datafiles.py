@@ -155,21 +155,23 @@ def tokenize_articles(stories_dir, tokenized_stories_dir, url_file=None, output_
     if delete_map: os.remove(root_dir+"mapping.txt")
 
     article_imgs = {}
+    flag = 0
+    imgs_list = os.listdir(imgs_dir)
     for story in stories:
-        imgs = []
-        for img in os.listdir(imgs_dir):
-            if story[:-4] == img[:len(story[:-4])]:
-                # print(img)
-                img = imgs_dir + img
-                imgs.append(img)
+        imgs = imgs_list[flag: flag+10]
+        # for img in os.listdir(imgs_dir):
+        #     if story[:-4] == img[:len(story[:-4])]:
+        #         # print(img)
+        #         img = imgs_dir + img
+        #         imgs.append(img)
+        flag += 10
         article_imgs[story] = imgs
 
-    # print(article_imgs)
-    # print(article_imgs['000bd7f9aeaab37f0b0436e73293d65f9d164774.txt'])
     train_dict = {}
     # 如果是要统计词频
     if make_vocab:
         vocab_counter = collections.Counter()
+
     tokenized_stories = os.listdir(tokenized_articles_dir)
     train_list = []
     for story_path in tokenized_stories:

@@ -108,7 +108,6 @@ def example_generator(data_path, single_pass=True):
         yield train['article'], train['abstract'], train['imgs']
 
 
-
 def article2ids(article_words, vocab):
     ids = []
     oovs = []  # out-of-vocabulary
@@ -235,7 +234,7 @@ class image_data(object):
         """
         imgs = []
         for img_path in self.imgs_path:
-            img = Image.open(img_path)
+            img = Image.open(config.train_img_path + img_path)
             # print(img)
             img = img.resize((wight, height), Image.BILINEAR)
             # 1.PIL转为tensor
@@ -253,7 +252,6 @@ class image_data(object):
             imgs.append(img_transforms)
         imgs_torch = torch.cat(imgs, dim=0)
         imgs_torch = Variable(imgs_torch)
-        # print(imgs_torch.shape)
         return imgs_torch
 
 # ------------------------------MMAE-----------------------

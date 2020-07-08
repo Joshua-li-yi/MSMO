@@ -39,7 +39,9 @@ def retrieve_name_ex(var):
 
 
 def tensor_shape(value):
+    print('-'*100)
     print("{} shape:  {}".format(retrieve_name_ex(value), value.shape))
+    print('-'*100)
     pass
 
 
@@ -61,14 +63,16 @@ def get_input_from_batch(batch, use_cuda):
             extra_zeros = Variable(torch.zeros((batch_size, batch.max_art_oovs)))
 
     # 上下文向量初始化为0
-    c_t_1 = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
-    c_i = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
-    c_i = c_i.unsqueeze(0)
+    c_mm = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
+
     # coverage初始化为0
-    coverage = None
+    coverage_txt = None
     if config.is_coverage:
-        coverage = Variable(torch.zeros(enc_batch.size()))
-        coverage_img = Variable(torch.zeros(config.batch_size, enc_batch.size(),2*config.hidden_dim))
+        coverage_txt = Variable(torch.zeros(enc_batch.size()))
+        if config.img_attention_model == 'ATL':
+            coverage_img = Variable(torch.zeros(config.batch_size*49, config.maxinum_imgs))
+        else:
+            coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs))
 
     if use_cuda:
         enc_batch = enc_batch.cuda()
@@ -78,12 +82,13 @@ def get_input_from_batch(batch, use_cuda):
             enc_batch_extend_vocab = enc_batch_extend_vocab.cuda()
         if extra_zeros is not None:
             extra_zeros = extra_zeros.cuda()
-        c_t_1 = c_t_1.cuda()
+        c_mm = c_mm.cuda()
 
-        if coverage is not None:
-            coverage = coverage.cuda()
+        if coverage_txt is not None:
+            coverage_txt = coverage_txt.cuda()
+            coverage_img = coverage_img.cuda()
 
-    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_t_1, coverage, imgs, c_i, coverage_img
+    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img
 
 
 def get_output_from_batch(batch, use_cuda):

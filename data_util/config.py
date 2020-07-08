@@ -61,6 +61,13 @@ SEED = 123
 img_attention_models = ['ATG', 'ATL', 'HAN']
 # 选择所用的模型
 img_attention_model = img_attention_models[0]
+model_maxinum_imgs = {
+    'ATG': 10,
+    'ATL': 7,
+    'HAN': 7
+}
+maxinum_imgs = model_maxinum_imgs[img_attention_model]
+
 # MMAE模型的选择
 methods = ['LR', 'Logis', 'MLP']
 method = methods[0]
