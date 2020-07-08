@@ -214,31 +214,49 @@ class img_attention(nn.Module):
             return c_img, attr_img, coverage_img
         elif self.img_attention_model == 'ATL':
             """
-
+            
             :param global_features: (tensor) (B*M)*4096
-            :param local_features: (tensor) (B*M)*(2*hidden_dim)*49
+            :param local_features: (tensor) (B*M)*512*49
             :param s_t_hat: B*(2*hidden_dim)
             :param coverage_img: B*(M*49)
             :param c_i: B*1*(2*hidden_dim)
-            :return: c_img : B*1*(2*hidden_dim)
-                    coverage_img : B*M
-                    attr_img : B*M
+            :return: c_img : B*(2*hidden_dim)
+                    coverage_img : B*(49*M)
+                    attr_img : B*(49*M)
             """
-            tensor_shape(local_features)
-            tensor_shape(coverage_img)
-            tensor_shape(s_t_hat)
             # (49*M) * 512
             local_features = local_features.view(-1, 512)
 
             g_star = self.w_g(local_features)  # (49*M)*512
+
             g_star = self.g_star(g_star)  # (49*M)*(2*hidden_dim)
-            w_g_star = self.w_g_star(g_star)  # (49*M)*B
-            w_g_star = w_g_star.permute(1, 0).contiguous()  # B*(49*M)
-            w_s_t = self.w_s_t(s_t_hat)  # B*(49*M)
+
+            w_g_star = self.w_g_star(g_star)  # (49*M)*1
+
+            w_g_star = w_g_star.permute(1, 0).contiguous()  # 1*(49*M)
+
+            w_s_t = self.w_s_t(s_t_hat)  # 1*(49*M)
+
             # F.tanh改为了 torch.tanh
-            e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # B*M
-            e_a = self.v(e_a)  # B*M
-            attr_img = torch.softmax(e_a, dim=1)  # B*M
+            e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # 1*(49*M)
+            e_a = self.v(e_a)   # 1*(49*M)
+            tensor_shape(e_a)  # 1*(49*M)
+            attr_img = torch.softmax(e_a, dim=1)  # 1*(49*M)
+
+            g_star = g_star.unsqueeze(1)  # (49*M)*1*(2*hidden_dim)
+            g_star = g_star.permute(1, 0, 2).contiguous()  # 1*(49*M)*(2*hidden_dim)
+
+            attr_img = attr_img.unsqueeze(1).contiguous()  # 1*1*(49*M)
+
+            # 矩阵相乘
+            c_img = torch.bmm(attr_img, g_star)  # 1*1*(2*hidden_dim)
+
+            c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
+            attr_img = attr_img.squeeze(1).contiguous()  # B*M
+            coverage_img = coverage_img.squeeze(1).contiguous()  # B*M
+
+            coverage_img = coverage_img + attr_img
+            return c_img, attr_img, coverage_img
 
         elif self.img_attention_model == 'HAN':
             g_star = self.g_star(global_features)
@@ -478,8 +496,7 @@ class Model(object):
 
         # shared the embedding between encoder and decoder
         decoder.embedding.weight = txt_encode.embedding.weight
-
-        # 不进行梯度回传，只进行向前计算
+        # only forward calculate
         if is_eval:
             txt_encode = txt_encode.eval()
             reduce_state = reduce_state.eval()
@@ -496,7 +513,8 @@ class Model(object):
         self.img_encode = img_encode
         self.decoder = decoder
         self.reduce_state = reduce_state
-        # 如果存在模型路径的话，就直接导入模型
+
+        # load model state
         if model_file_path is not None:
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
             self.txt_encode.load_state_dict(state['txt_encode_state_dict'])

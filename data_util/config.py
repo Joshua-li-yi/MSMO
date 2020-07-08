@@ -9,8 +9,8 @@ import os
 
 root_dir = r'D:/githubProject/MSMO/'
 
-#train_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/train.bin")
 train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train/train.json")
+train_data_path_ATL = os.path.join(root_dir, r"data/data_preview/finished_files/train/train_ATL.json")
 eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
 decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
 # vocab的路径
@@ -59,13 +59,13 @@ lr_coverage = 0.15
 SEED = 123
 # 图片的注意力机制选择
 img_attention_models = ['ATG', 'ATL', 'HAN']
-# 选择所用的模型
-img_attention_model = img_attention_models[0]
 model_maxinum_imgs = {
     'ATG': 10,
     'ATL': 7,
     'HAN': 7
 }
+# 选择所用的模型
+img_attention_model = img_attention_models[1]
 maxinum_imgs = model_maxinum_imgs[img_attention_model]
 
 # MMAE模型的选择

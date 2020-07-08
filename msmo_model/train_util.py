@@ -62,7 +62,7 @@ def get_input_from_batch(batch, use_cuda):
         if batch.max_art_oovs > 0:
             extra_zeros = Variable(torch.zeros((batch_size, batch.max_art_oovs)))
 
-    # 上下文向量初始化为0
+    # 上向量初始化为0
     c_mm = Variable(torch.zeros((batch_size, 2 * config.hidden_dim)))
 
     # coverage初始化为0
@@ -70,7 +70,7 @@ def get_input_from_batch(batch, use_cuda):
     if config.is_coverage:
         coverage_txt = Variable(torch.zeros(enc_batch.size()))
         if config.img_attention_model == 'ATL':
-            coverage_img = Variable(torch.zeros(config.batch_size*49, config.maxinum_imgs))
+            coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs*49))
         else:
             coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs))
 

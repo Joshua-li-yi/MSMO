@@ -158,16 +158,15 @@ def tokenize_articles(stories_dir, tokenized_stories_dir, url_file=None, output_
     flag = 0
     imgs_list = os.listdir(imgs_dir)
     for story in stories:
-        imgs = imgs_list[flag: flag+10]
+        imgs = imgs_list[flag: flag+config.maxinum_imgs]
         # for img in os.listdir(imgs_dir):
         #     if story[:-4] == img[:len(story[:-4])]:
         #         # print(img)
         #         img = imgs_dir + img
         #         imgs.append(img)
-        flag += 10
+        flag += config.maxinum_imgs
         article_imgs[story] = imgs
 
-    train_dict = {}
     # 如果是要统计词频
     if make_vocab:
         vocab_counter = collections.Counter()
@@ -199,13 +198,13 @@ def tokenize_articles(stories_dir, tokenized_stories_dir, url_file=None, output_
     print(len(train_list))
 
     # Writing JSON data
-    with open(train_data_dir+'train.json', 'w') as f:
+    with open(train_data_dir+'train_ATL.json', 'w') as f:
         ujson.dump(train_list[:150], f, indent=4)
 
-    with open(valid_data_dir + 'valid.json', 'w') as f:
+    with open(valid_data_dir + 'valid_ATL.json', 'w') as f:
         ujson.dump(train_list[150:175], f, indent=4)
 
-    with open(test_data_dir+'test.json', 'w') as f:
+    with open(test_data_dir+'test_ATL.json', 'w') as f:
         ujson.dump(train_list[175:], f, indent=4)
 
     print("Successfully save data ")

@@ -283,7 +283,7 @@ class Batcher(object):
         while True:
             try:
                 # python 3.x中将next（）改为了__next__()
-                article_text,abstract_text,imgs = example_generator.__next__()  # e is a tf.Example
+                article_text, abstract_text, imgs = example_generator.__next__()  # e is a tf.Example
             except ValueError:
                 print('Failed to get article or abstract from example')
                 continue

@@ -28,9 +28,9 @@ class Train(object):
         print('vocab generate ...')
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         # self.vocab.write_metadata(fpath=config.word_id_path)
-
+        self.pictures = []
         print('vocab generate finish')
-        self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
+        self.batcher = Batcher(config.train_data_path_ATL, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
         print('time sleep ...')
         time.sleep(1)
@@ -128,6 +128,9 @@ class Train(object):
             step_mask = dec_padding_mask[:, di]
             step_loss = step_loss * step_mask
             step_losses.append(step_loss)
+            pass
+
+        self.pictures.append(torch.argmax(coverage_img))
 
         sum_losses = torch.sum(torch.stack(step_losses, 1), 1)
         batch_avg_loss = sum_losses / dec_lens_var
