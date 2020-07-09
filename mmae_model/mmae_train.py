@@ -1,9 +1,10 @@
 # -*- coding:utf-8 -*-
-# @Time： 2020-06-28 11:07
+# @Time： 2020-07-09 17:26
 # @Author: Joshua_yi
 # @FileName: mmae_train.py
 # @Software: PyCharm
 # @Project: MSMO
+# @Description: 
 
 import pickle
 import os
@@ -13,12 +14,12 @@ import shutil
 import torch
 import data_util.data
 from vocab import Vocabulary  # NOQA
-from model.mmae import VSE
-from model.eval import i2t, t2i, AverageMeter, LogCollector, encode_data
+from mmae_model.mmae import VSE
+from mmae_model.eval import i2t, t2i, AverageMeter, LogCollector, encode_data
 
 import logging
 import tensorboard_logger as tb_logger
-
+from mmae_model import data
 import argparse
 
 
@@ -188,6 +189,7 @@ def train(opt, train_loader, model, epoch, val_loader):
         # validate at every val_step
         if model.Eiters % opt.val_step == 0:
             validate(opt, val_loader, model)
+    pass
 
 
 def validate(opt, val_loader, model):
@@ -202,8 +204,10 @@ def validate(opt, val_loader, model):
     # image retrieval
     (r1i, r5i, r10i, medri, meanr) = t2i(
         img_embs, cap_embs, measure=opt.measure)
+
     logging.info("Text to image: %.1f, %.1f, %.1f, %.1f, %.1f" %
                  (r1i, r5i, r10i, medri, meanr))
+
     # sum of recalls to be used for early stopping
     currscore = r1 + r5 + r10 + r1i + r5i + r10i
 

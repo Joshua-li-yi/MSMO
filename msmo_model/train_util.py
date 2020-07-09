@@ -11,9 +11,13 @@ import torch
 from data_util import config
 import time
 import torch
-# 时间使用装饰器
-# 使用时直接在函数前加 @timer
+import logging
 
+
+def print_info(info):
+    logging.info(info)
+    print(info)
+    pass
 
 def timer(func):
     def wrapper(*args, **kwargs):
@@ -49,7 +53,6 @@ def get_input_from_batch(batch, use_cuda):
 
     batch_size = len(batch.enc_lens)
     imgs = batch.original_imgs
-
     enc_batch = Variable(torch.from_numpy(batch.enc_batch).long())
     enc_padding_mask = Variable(torch.from_numpy(batch.enc_padding_mask)).float()
     enc_lens = batch.enc_lens

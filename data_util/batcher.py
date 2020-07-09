@@ -12,6 +12,7 @@ from threading import Thread
 import numpy as np
 from data_util import data, config
 import random
+import torch
 random.seed(config.SEED)
 
 
@@ -152,8 +153,12 @@ class Batch(object):
         self.original_abstracts = [ex.original_abstract for ex in example_list]  # list of lists
         self.original_abstracts_sents = [ex.original_abstract_sents for ex in example_list]  # list of list of lists
         # 增加的存储imgs
-        self.original_imgs = [ex.original_imgs for ex in example_list]
-
+        original_imgs = []
+        for ex in example_list: original_imgs.append(ex.original_imgs)
+        # self.original_imgs = [ex.original_imgs for ex in example_list]
+        self.original_imgs = torch.cat(original_imgs, dim=0)
+        # print(len(self.original_imgs))
+        pass
 class Batcher(object):
     BATCH_QUEUE_MAX = 100  # max number of batches the batch_queue can hold
 

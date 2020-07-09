@@ -15,7 +15,14 @@ from msmo_model.msmo import MSMO
 from data_util.batcher import Batcher
 from data_util.data import Vocab
 from data_util.utils import calc_running_avg_loss
-from msmo_model.train_util import get_input_from_batch, get_output_from_batch
+from msmo_model.train_util import get_input_from_batch, get_output_from_batch, tensor_shape, print_info
+import logging
+
+logging.basicConfig(level=logging.INFO,  # logging level
+                    filename=config.msmo_logging_path,
+                    filemode='a',
+                    format='%(asctime)s - %(pathname)s[line:%(lineno)d] - %(levelname)s: %(message)s'
+                    )
 
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -25,12 +32,13 @@ class Train(object):
     train the model
     """
     def __init__(self, img_attention_model=config.img_attention_model):
-        print(f'beign train the {img_attention_model} ...')
+        print_info(f'beign train the {img_attention_model} ...')
+
         self.img_attention_model = img_attention_model
-        print('vocab generate ...')
+        print_info('vocab generate ...')
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.pictures = []
-        print('vocab generate finish')
+        print_info('vocab generate finish')
         self.batcher = Batcher(config.train_data_path_ATL, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
 
@@ -43,7 +51,7 @@ class Train(object):
             'decoder_state_dict': self.model.decoder.state_dict(),
             'reduce_state_dict': self.model.reduce_state.state_dict(),
         }
-        model_save_path = os.path.join(model_filepath, 'model_%d_%d.pt' % (iter, int(time.time())))
+        model_save_path = os.path.join(model_filepath, 'model_%d_%d.pth' % (iter, int(time.time())))
         torch.save(state, model_save_path)
         pass
 
@@ -85,16 +93,18 @@ class Train(object):
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
 
-            step_loss = -torch.log(gold_probs + config.eps)
+            step_loss = -torch.log(gold_probs + config.eps) #B
             if config.is_coverage:
-                step_coverage_loss_txt = torch.sum(torch.min(attn_dist, coverage_txt), 1)
-                step_coverage_loss_img = torch.sum(torch.min(attn_img, coverage_img), 1)
+                step_coverage_loss_txt = torch.sum(torch.min(attn_dist, coverage_txt), 1) # B
+                step_coverage_loss_img = torch.sum(torch.min(attn_img, coverage_img), 1) # B
                 step_loss = step_loss + config.cov_loss_wt * step_coverage_loss_txt + config.cov_loss_wt * step_coverage_loss_img
                 coverage_txt = next_coverage_txt
                 coverage_img = next_coverage_img
                 if config.img_attention_model == 'HAN':
-                    step_coverage_loss_img_patches = torch.sum(torch.min(img_patches[0], img_patches[1]), 1)
+
+                    step_coverage_loss_img_patches = torch.sum(torch.min(img_patches[0], img_patches[1]), (1, 2))
                     step_loss = step_loss + config.cov_loss_wt * step_coverage_loss_img_patches
+                    tensor_shape(step_loss)
                     coverage_img_patches = img_patches[1]
 
             step_mask = dec_padding_mask[:, di]
@@ -121,26 +131,29 @@ class Train(object):
     def train_iters(self, iters=config.max_iterations):
         iter, running_avg_loss = self.setup_train()
         start = time.time()
+        print_info('begin train ...')
         while iter < iters:
+
             iter += 1
-            print('%i iters...' % iter)
             batch = self.batcher.next_batch()
-            print('train one batch...')
             loss = self.train_one_batch(batch)
-            print('calc_running_avg_loss...')
             # running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
             running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, iter)
-            print('iter', iter, 'running_avg_loss is', running_avg_loss)
-            print('iter', iter, 'loss is', loss)
+            print_info(f'iter{iter} running_avg_loss is {running_avg_loss}')
+            print_info(f'iter{iter} loss is {loss}')
 
             print_interval = 1
             if iter % print_interval == 0:
-                print('steps %d, seconds for %d batch: %.2f s , loss: %f' % (iter, print_interval, time.time() - start, loss))
+                print_info('steps %d, seconds for %d batch: %.2f s , loss: %f' % (iter, print_interval, time.time() - start, loss))
                 start = time.time()
+        print_info(f'end train {self.img_attention_model} model')
         pass
 
 
 if __name__ == '__main__':
     train_processor = Train(img_attention_model=config.img_attention_model)
-    train_processor.train_iters(iters=config.max_iterations)
-    train_processor.save_model()
+    train_processor.train_iters(iters=30)
+    print_info(f'begin save model in {config.modle_path}')
+    train_processor.save_model(30, model_filepath=config.modle_path)
+    print_info('='*50)
+

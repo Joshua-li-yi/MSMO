@@ -1,32 +1,11 @@
 # -*- coding:utf-8 -*-
-# @Time： 2020-06-28 10:10
+# @Time： 2020-07-09 17:26
 # @Author: Joshua_yi
 # @FileName: mmae.py
 # @Software: PyCharm
 # @Project: MSMO
-import os
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchvision import models
-from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
-# 导入配置
-from data_util import config
-from numpy import random
-import pyrouge
-# 是否使用cuda加速
-use_cuda = config.use_gpu and torch.cuda.is_available()
+# @Description: 
 
-random.seed(config.SEED)
-# 为CPU设置种子用于生成随机数，以十结果是确定的
-torch.manual_seed(config.SEED)
-
-# 为当前的GPU设置随机种子
-# torch.cuda.manual_seed(123)
-
-if torch.cuda.is_available():
-    # 如果使用多个GPU，为所有的GPU设置种子
-    torch.cuda.manual_seed_all(config.SEED)
 
 import torch
 import torch.nn as nn
@@ -38,6 +17,10 @@ import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm
 import numpy as np
 from collections import OrderedDict
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.neural_network import MLPRegressor
+from data_util import config
+import pandas as pd
 
 
 def l2norm(X):
@@ -54,14 +37,10 @@ def EncoderImage(data_name, img_dim, embed_size, finetune=False,
     precomputed image features, `EncoderImagePrecomp`, or an encoder that
     computes image features on the fly `EncoderImageFull`.
     """
-    if data_name.endswith('_precomp'):
-        img_enc = EncoderImagePrecomp(
-            img_dim, embed_size, use_abs, no_imgnorm)
-    else:
-        img_enc = EncoderImageFull(
-            embed_size, finetune, cnn_type, use_abs, no_imgnorm)
 
+    img_enc = EncoderImageFull(embed_size, finetune, cnn_type, use_abs, no_imgnorm)
     return img_enc
+
 
 
 # tutorials/09 - Image Captioning
@@ -159,55 +138,6 @@ class EncoderImageFull(nn.Module):
             features = torch.abs(features)
 
         return features
-
-
-class EncoderImagePrecomp(nn.Module):
-
-    def __init__(self, img_dim, embed_size, use_abs=False, no_imgnorm=False):
-        super(EncoderImagePrecomp, self).__init__()
-        self.embed_size = embed_size
-        self.no_imgnorm = no_imgnorm
-        self.use_abs = use_abs
-
-        self.fc = nn.Linear(img_dim, embed_size)
-
-        self.init_weights()
-
-    def init_weights(self):
-        """Xavier initialization for the fully connected layer
-        """
-        r = np.sqrt(6.) / np.sqrt(self.fc.in_features +
-                                  self.fc.out_features)
-        self.fc.weight.data.uniform_(-r, r)
-        self.fc.bias.data.fill_(0)
-
-    def forward(self, images):
-        """Extract image feature vectors."""
-        # assuming that the precomputed features are already l2-normalized
-
-        features = self.fc(images)
-
-        # normalize in the joint embedding space
-        if not self.no_imgnorm:
-            features = l2norm(features)
-
-        # take the absolute value of embedding (used in order embeddings)
-        if self.use_abs:
-            features = torch.abs(features)
-
-        return features
-
-    def load_state_dict(self, state_dict):
-        """Copies parameters. overwritting the default one to
-        accept state_dict from Full model
-        """
-        own_state = self.state_dict()
-        new_state = OrderedDict()
-        for name, param in state_dict.items():
-            if name in own_state:
-                new_state[name] = param
-
-        super(EncoderImagePrecomp, self).load_state_dict(new_state)
 
 
 # tutorials/08 - Language Model
@@ -413,3 +343,45 @@ class VSE(object):
         if self.grad_clip > 0:
             clip_grad_norm(self.params, self.grad_clip)
         self.optimizer.step()
+
+
+class txt_salience(object):
+    def __init__(self):
+        pass
+
+class image_salinece(object):
+    def __init__(self):
+        pass
+
+class image_txt_relevance(object):
+    def __init__(self):
+        pass
+
+
+class MMAE(object):
+    def __init__(self, mmae_method=config.mmae_method):
+        self.salience_of_txt = txt_salience()
+        self.salience_of_img = image_salinece()
+        self.relevance_img_txt = image_txt_relevance()
+        self.human_score = pd.DataFrame()
+        method_dict = {
+            'LR': self.LR_model,
+            'Logis': self.Logis_model,
+            'MLP': self.MLP_model
+        }
+        return method_dict[mmae_method]()
+
+    def LR_model(self):
+        lr = LinearRegression()
+        lr.fit([self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
+        return lr
+
+    def Logis_model(self):
+        lr = LinearRegression()
+        lr.fit([self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
+        return lr
+
+    def MLP_model(self):
+        mlp = MLPRegressor()
+        mlp.fit(x=[self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
+        return mlp
