@@ -14,15 +14,15 @@ import torch
 # 时间使用装饰器
 # 使用时直接在函数前加 @timer
 
+
 def timer(func):
     def wrapper(*args, **kwargs):
         start = time.time()
         r = func(*args, **kwargs)
-        end = time.time()
-        cost = end - start
-        print(f"Cost time: {cost} s")
+        print(f"{func.__name__} () cost time: {time.time() - start} s")
         return r
     return wrapper
+
 
 import inspect
 def retrieve_name_ex(var):
@@ -71,25 +71,29 @@ def get_input_from_batch(batch, use_cuda):
         coverage_txt = Variable(torch.zeros(enc_batch.size()))
         if config.img_attention_model == 'ATL':
             coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs*49))
-        else:
+        elif config.img_attention_model == 'ATG':
             coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs))
+        elif config.img_attention_model == 'HAN':
+            coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs))
+            coverage_patches = Variable(torch.zeros(config.batch_size, config.maxinum_imgs, 512))
 
     if use_cuda:
         enc_batch = enc_batch.cuda()
         enc_padding_mask = enc_padding_mask.cuda()
-
+        c_mm = c_mm.cuda()
         if enc_batch_extend_vocab is not None:
             enc_batch_extend_vocab = enc_batch_extend_vocab.cuda()
         if extra_zeros is not None:
             extra_zeros = extra_zeros.cuda()
-        c_mm = c_mm.cuda()
-
         if coverage_txt is not None:
             coverage_txt = coverage_txt.cuda()
             coverage_img = coverage_img.cuda()
+            if config.img_attention_model == 'HAN': coverage_patches = coverage_patches.cuda()
 
-    return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img
-
+    if config.img_attention_model == 'HAN':
+        return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img, coverage_patches
+    else:
+        return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img, ()
 
 def get_output_from_batch(batch, use_cuda):
     dec_batch = Variable(torch.from_numpy(batch.dec_batch).long())

@@ -11,13 +11,11 @@ root_dir = r'D:/githubProject/MSMO/'
 
 train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train/train.json")
 train_data_path_ATL = os.path.join(root_dir, r"data/data_preview/finished_files/train/train_ATL.json")
-eval_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/val.bin")
-decode_data_path = os.path.join(root_dir, "ptr_nw/cnn-dailymail-master/finished_files/test.bin")
 # vocab的路径
 vocab_path = os.path.join(root_dir, r"data/data_preview/finished_files/vocab.txt")
 word_id_path = os.path.join(root_dir,r'data/data_preview/word_id.csv')
 
-log_root = os.path.join(root_dir, "log")
+log_root = os.path.join(root_dir, r"msmo_model/logging.log")
 
 train_caption_path = os.path.join(root_dir, r'data/data_preview/caption/')
 train_img_path = os.path.join(root_dir, r'data/data_preview/img/')
@@ -65,10 +63,10 @@ model_maxinum_imgs = {
     'HAN': 7
 }
 # 选择所用的模型
-img_attention_model = img_attention_models[1]
+img_attention_model = img_attention_models[2]
 maxinum_imgs = model_maxinum_imgs[img_attention_model]
 
 # MMAE模型的选择
 methods = ['LR', 'Logis', 'MLP']
 method = methods[0]
-modle_path = ''
+modle_path = os.path.join(root_dir, r'msmo_model/')

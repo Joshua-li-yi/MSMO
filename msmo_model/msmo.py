@@ -13,6 +13,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from data_util import config
 from numpy import random
 from msmo_model.train_util import tensor_shape
+
 # 是否使用cuda加速
 use_cuda = config.use_gpu and torch.cuda.is_available()
 
@@ -100,6 +101,7 @@ class img_encoder(nn.Module):
     """
     img encode
     """
+
     def __init__(self):
         super(img_encoder, self).__init__()
         # 导入模型结构
@@ -125,7 +127,7 @@ class img_encoder(nn.Module):
 
         local_features = self.local_features_net(input[0])
         # 维度转化
-        local_features_output = local_features.view(-1, 2*config.hidden_dim, 49)  # B*49*(2*hidden_dim)
+        local_features_output = local_features.view(-1, 2 * config.hidden_dim, 49)  # B*49*(2*hidden_dim)
 
         global_features = self.global_features_net(local_features.view(local_features.size(0), -1))
 
@@ -143,32 +145,171 @@ class img_attention(nn.Module):
     def __init__(self, img_attention_model=None, d_h=config.hidden_dim * 2):
         super(img_attention, self).__init__()
         self.img_attention_model = img_attention_model
-        global_features_dim = 4096
+        self.d_h = d_h
+        self.global_features_dim = 4096
+        model_dict = {'ATG': self.init_ATG, 'ATL': self.init_ATL, 'HAN': self.init_HAN}
+        model_dict[img_attention_model]()
+        pass
 
-        if img_attention_model == 'ATG':
-            self.w_g = nn.Linear(in_features=global_features_dim, out_features=global_features_dim)
-            self.g_star = nn.Linear(in_features=global_features_dim, out_features=d_h)
+    def init_ATG(self):
+        self.w_g = nn.Linear(in_features=self.global_features_dim, out_features=self.global_features_dim)
+        self.g_star = nn.Linear(in_features=self.global_features_dim, out_features=self.d_h)
+        self.w_g_star = nn.Linear(in_features=self.d_h, out_features=1, bias=False)
+        self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs, bias=False)
+        self.v = nn.Linear(in_features=config.maxinum_imgs, out_features=config.maxinum_imgs, bias=False)
+        pass
 
-            self.w_g_star = nn.Linear(in_features=d_h, out_features=1, bias=False)
-            self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs, bias=False)
-            self.v = nn.Linear(in_features=config.maxinum_imgs, out_features=config.maxinum_imgs, bias=False)
+    def init_ATL(self):
+        self.w_g = nn.Linear(in_features=512, out_features=512)
+        self.g_star = nn.Linear(in_features=512, out_features=self.d_h)
 
-        elif img_attention_model == 'ATL':
-            self.w_g = nn.Linear(in_features=512, out_features=512)
-            self.g_star = nn.Linear(in_features=512, out_features=d_h)
+        self.w_g_star = nn.Linear(in_features=self.d_h, out_features=1, bias=False)
+        self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs * 49, bias=False)
+        self.v = nn.Linear(in_features=config.maxinum_imgs * 49, out_features=config.maxinum_imgs * 49, bias=False)
+        pass
 
-            self.w_g_star = nn.Linear(in_features=d_h, out_features=1, bias=False)
-            self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs * 49, bias=False)
-            self.v = nn.Linear(in_features=config.maxinum_imgs * 49, out_features=config.maxinum_imgs * 49, bias=False)
+    def init_HAN(self):
+        self.w_g = nn.Linear(in_features=49, out_features=self.d_h)
+        self.g_star = nn.Linear(in_features=self.d_h, out_features=1)
 
-        elif img_attention_model == 'HAN':
-            self.g_star = nn.Linear()
+        self.w_g_star = nn.Linear(in_features=512, out_features=512, bias=False)
+        self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs*512, bias=False)
+        self.v = nn.Linear(in_features=512, out_features=512, bias=False)
 
-    def forward(self, global_features, local_features, s_t_hat, coverage_img):
+        self.w_g_star_i = nn.Linear(in_features=512, out_features=1, bias=False)
+        self.w_s_t_i = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs, bias=False)
+        self.v_i = nn.Linear(in_features=config.maxinum_imgs, out_features=config.maxinum_imgs, bias=False)
+
+        pass
+
+    def ATG_forward(self, global_features, local_features, s_t_hat, coverage_img, coverage_patches=None):
         """
 
+        :param global_features: (tensor) B*M*4096
+        :param s_t_hat: B*(2*hidden_dim)
+        :param coverage_img: B*M
+        :param c_i: B*(2*hidden_dim)
+        :param encoder_outputs:
+        :return: c_img : B*(2*hidden_dim)
+                 coverage_img : B*M
+                 attr_img : B*M
+        """
+
+        g_star = self.w_g(global_features)  # B*M*4096
+        g_star = self.g_star(g_star)  # B*M*(2*hidden_dim)
+        w_g_star = self.w_g_star(g_star)  # M*B
+        w_g_star = w_g_star.permute(1, 0).contiguous()  # B*M
+        w_s_t = self.w_s_t(s_t_hat)  # B*M
+        # F.tanh改为了 torch.tanh
+        e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # B*M
+        e_a = self.v(e_a)  # B*M
+        attr_img = torch.softmax(e_a, dim=1)  # B*M
+        attr_img = attr_img.unsqueeze(1)  # B x 1 x M
+
+        g_star = g_star.unsqueeze(1)  # M*B*(2*hidden_dim)
+        g_star = g_star.permute(1, 0, 2).contiguous()  # B*M*(2*hidden_dim)
+        # 矩阵相乘
+        c_img = torch.bmm(attr_img, g_star)  # B x 1 x n
+        c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
+        attr_img = attr_img.squeeze(1).contiguous()  # B*M
+        coverage_img = coverage_img.squeeze(1).contiguous()  # B*M
+
+        coverage_img = coverage_img + attr_img
+        return c_img, attr_img, coverage_img, ()
+
+    def ATL_forward(self, global_features, local_features, s_t_hat, coverage_img, coverage_patches=None):
+        """
+        :param local_features: (tensor) B*M*512*49
+        :param s_t_hat: B*(2*hidden_dim)
+        :param coverage_img: B*(M*49)
+        :return: c_img : B*(2*hidden_dim)
+                coverage_img : B*(49*M)
+                attr_img : B*(49*M)
+        """
+        # (49*M) * 512
+        local_features = local_features.view(-1, 512)
+
+        g_star = self.w_g(local_features)  # B*(49*M)*512
+
+        g_star = self.g_star(g_star)  # B*(49*M)*(2*hidden_dim)
+
+        w_g_star = self.w_g_star(g_star)  # (49*M)*B
+
+        w_g_star = w_g_star.permute(1, 0).contiguous()  # B*(49*M)
+
+        w_s_t = self.w_s_t(s_t_hat)  # 1*(49*M)
+
+        # F.tanh改为了 torch.tanh
+        e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # B*(49*M)
+        e_a = self.v(e_a)  # B*(49*M)
+        tensor_shape(e_a)  # B*(49*M)
+        attr_img = torch.softmax(e_a, dim=1)  # B*(49*M)
+        # FIXME：加了batch之后可能就不需要了
+        g_star = g_star.unsqueeze(1)  # (49*M)*1*(2*hidden_dim)
+        g_star = g_star.permute(1, 0, 2).contiguous()  # 1*(49*M)*(2*hidden_dim)
+
+        attr_img = attr_img.unsqueeze(1).contiguous()  # B*1*(49*M)
+
+        # 矩阵相乘
+        c_img = torch.bmm(attr_img, g_star)   # B*1*(2*hidden_dim)
+
+        c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
+        attr_img = attr_img.squeeze(1).contiguous()  # B*M
+        coverage_img = coverage_img.squeeze(1).contiguous()  # B*M
+
+        coverage_img = coverage_img + attr_img
+        return c_img, attr_img, coverage_img, ()
+
+    def HAN_forward(self, global_features, local_features, s_t_hat, coverage_img, coverage_patches):
+        """
+         :param local_features: (tensor) B*M*512*49
+         :param s_t_hat: B*(2*hidden_dim)
+         :param coverage_img: B*M
+         :param coverage_patches : B*M*512
+         :return: c_img : B*(2*hidden_dim)
+                  coverage_img : B*M
+                  attr_img : B*M
+                  attr_img_patches B*M*512
+                  coverage_patches B*M*512
+        """
+        g_star = self.w_g(local_features)  # B*M*512*(2*hidden_dim)
+        g_star = self.g_star(g_star)  # B*M*512*1
+        g_star = g_star.squeeze(2).contiguous()  # B*M*512
+
+        w_g_star = self.w_g_star(g_star)  # B*M*512
+        # FIXME : 加了batch之后可能就不需要了
+        w_g_star = w_g_star.unsqueeze(0)
+
+        w_s_t = self.w_s_t(s_t_hat)  # B*(M*512)
+
+        w_s_t = w_s_t.view(-1, config.maxinum_imgs, 512)  # B*M*512
+        # F.tanh改为了 torch.tanh
+        e_a = torch.tanh(w_g_star + w_s_t + coverage_patches)  # 1*M
+        e_a = self.v(e_a)  # B*M*512
+        attr_img_patches = torch.softmax(e_a, dim=1)  # B*M*512
+        coverage_patches += attr_img_patches
+
+        w_g_star_i = self.w_g_star_i(g_star)  # M*B
+        w_g_star_i = w_g_star_i.permute(1, 0).contiguous()  # B*M
+        w_s_t_i = self.w_s_t_i(s_t_hat)  # B*M
+        e_a_i = torch.tanh(w_g_star_i + w_s_t_i + coverage_img)
+        e_a_i = self.v_i(e_a_i)  # B*M
+        attr_img = torch.softmax(e_a_i, dim=1)
+        coverage_img += attr_img
+
+        attr_img = attr_img.unsqueeze(1).contiguous()  # B*1*M
+        # FIXME : 加了batch之后可能就不需要了
+        g_star = g_star.unsqueeze(0).contiguous()  # 1*M*512
+
+        c_img = torch.bmm(attr_img, g_star)  # B*1*(2*hidden_dim)
+        c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
+        attr_img = attr_img.squeeze(1).contiguous()  # B*M
+        return c_img, attr_img, coverage_img, (attr_img_patches, coverage_patches)
+
+    def forward(self, global_features, local_features, s_t_hat, coverage_img, coverage_patches):
+        """
         :param global_features: (tensor) (B*M)*4096
-        :param local_features: (tensor) (B*M)*(2*hidden_dim)*49
+        :param local_features: (tensor) (B*M)*512*49
         :param s_t_hat: B*(2*hidden_dim)
         :param coverage_img: B*M
         :param c_i: B*1*(2*hidden_dim)
@@ -177,95 +318,12 @@ class img_attention(nn.Module):
                 coverage_img : B*M
                 attr_img : B*M
         """
-        if self.img_attention_model == 'ATG':
-            """
-
-            :param global_features: (tensor) (B*M)*4096
-            :param local_features: (tensor) (B*M)*(2*hidden_dim)*49
-            :param s_t_hat: B*(2*hidden_dim)
-            :param coverage_img: B*M
-            :param c_i: B*1*(2*hidden_dim)
-            :param encoder_outputs:
-            :return: c_img : B*1*(2*hidden_dim)
-                    coverage_img : B*M
-                    attr_img : B*M
-            """
-
-            g_star = self.w_g(global_features)  # M*4096
-            g_star = self.g_star(g_star)  # M*(2*hidden_dim)
-            w_g_star = self.w_g_star(g_star)  # M*B
-            w_g_star = w_g_star.permute(1, 0).contiguous()   # B*M
-            w_s_t = self.w_s_t(s_t_hat)  # B*M
-            # F.tanh改为了 torch.tanh
-            e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # B*M
-            e_a = self.v(e_a)  # B*M
-            attr_img = torch.softmax(e_a, dim=1)  # B*M
-            attr_img = attr_img.unsqueeze(1)  # B x 1 x M
-
-            g_star = g_star.unsqueeze(1)  # M*B*(2*hidden_dim)
-            g_star = g_star.permute(1, 0, 2).contiguous()  # B*M*(2*hidden_dim)
-            # 矩阵相乘
-            c_img = torch.bmm(attr_img, g_star)  # B x 1 x n
-            c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
-            attr_img = attr_img.squeeze(1).contiguous()  # B*M
-            coverage_img = coverage_img.squeeze(1).contiguous()  # B*M
-
-            coverage_img = coverage_img + attr_img
-            return c_img, attr_img, coverage_img
-        elif self.img_attention_model == 'ATL':
-            """
-            
-            :param global_features: (tensor) (B*M)*4096
-            :param local_features: (tensor) (B*M)*512*49
-            :param s_t_hat: B*(2*hidden_dim)
-            :param coverage_img: B*(M*49)
-            :param c_i: B*1*(2*hidden_dim)
-            :return: c_img : B*(2*hidden_dim)
-                    coverage_img : B*(49*M)
-                    attr_img : B*(49*M)
-            """
-            # (49*M) * 512
-            local_features = local_features.view(-1, 512)
-
-            g_star = self.w_g(local_features)  # (49*M)*512
-
-            g_star = self.g_star(g_star)  # (49*M)*(2*hidden_dim)
-
-            w_g_star = self.w_g_star(g_star)  # (49*M)*1
-
-            w_g_star = w_g_star.permute(1, 0).contiguous()  # 1*(49*M)
-
-            w_s_t = self.w_s_t(s_t_hat)  # 1*(49*M)
-
-            # F.tanh改为了 torch.tanh
-            e_a = torch.tanh(w_g_star + w_s_t + coverage_img)  # 1*(49*M)
-            e_a = self.v(e_a)   # 1*(49*M)
-            tensor_shape(e_a)  # 1*(49*M)
-            attr_img = torch.softmax(e_a, dim=1)  # 1*(49*M)
-
-            g_star = g_star.unsqueeze(1)  # (49*M)*1*(2*hidden_dim)
-            g_star = g_star.permute(1, 0, 2).contiguous()  # 1*(49*M)*(2*hidden_dim)
-
-            attr_img = attr_img.unsqueeze(1).contiguous()  # 1*1*(49*M)
-
-            # 矩阵相乘
-            c_img = torch.bmm(attr_img, g_star)  # 1*1*(2*hidden_dim)
-
-            c_img = c_img.view(-1, config.hidden_dim * 2).contiguous()  # B*(2*hidden_dim)
-            attr_img = attr_img.squeeze(1).contiguous()  # B*M
-            coverage_img = coverage_img.squeeze(1).contiguous()  # B*M
-
-            coverage_img = coverage_img + attr_img
-            return c_img, attr_img, coverage_img
-
-        elif self.img_attention_model == 'HAN':
-            g_star = self.g_star(global_features)
-            e_a = self.e_a(g_star, s_t_hat)
-            e_a = torch.tanh(e_a)
-            alpha_a = torch.softmax(e_a)
-
-
-
+        model_forward_dict = {
+            'ATG': self.ATG_forward,
+            'ATL': self.ATL_forward,
+            'HAN': self.HAN_forward
+        }
+        return model_forward_dict[self.img_attention_model](global_features, local_features, s_t_hat, coverage_img, coverage_patches)
 
 
 class multi_attention(nn.Module):
@@ -295,8 +353,8 @@ class multi_attention(nn.Module):
         w_c_img = self.w_c_img(input_c_img)  # B*(2*hidden_dim)
         w_s_img = self.w_s_img(input_s_t)  # B*(2*hidden_dim)
 
-        e_txt = self.v_txt(w_c_txt+w_s_txt)  # B*1
-        e_img = self.v_img(w_c_img+w_s_img)  # B*1
+        e_txt = self.v_txt(w_c_txt + w_s_txt)  # B*1
+        e_img = self.v_img(w_c_img + w_s_img)  # B*1
         # need dim arg
         alpha_txt = torch.softmax(e_txt, dim=1)  # B*1
         alpha_img = torch.softmax(e_img, dim=1)  # B*1
@@ -305,9 +363,9 @@ class multi_attention(nn.Module):
         return c_mm
 
 
-class ReduceState(nn.Module):
+class txt_reduce_state(nn.Module):
     def __init__(self):
-        super(ReduceState, self).__init__()
+        super(txt_reduce_state, self).__init__()
 
         self.reduce_h = nn.Linear(config.hidden_dim * 2, config.hidden_dim)
         init_linear_wt(self.reduce_h)
@@ -382,12 +440,13 @@ class txt_attention(nn.Module):
         return c_t, attn_dist, coverage
 
 
-class Decoder(nn.Module):
-    def __init__(self):
-        super(Decoder, self).__init__()
+class msmo_decoder(nn.Module):
+    def __init__(self, img_attention_model=config.img_attention_model):
+        super(msmo_decoder, self).__init__()
+        self.img_attention_model = img_attention_model
         self.txt_attention = txt_attention()
         # 需要被训练
-        self.img_attention = img_attention(img_attention_model=config.img_attention_model)
+        self.img_attention = img_attention(img_attention_model)
         # 需要被训练
         self.multi_attention = multi_attention()
         # decoder
@@ -409,7 +468,7 @@ class Decoder(nn.Module):
 
     def forward(self, y_t_1, s_t_1, encoder_outputs, encoder_feature, enc_padding_mask,
                 c_mm, extra_zeros, enc_batch_extend_vocab, coverage, step, golbal_features, local_features,
-                coverage_img):
+                coverage_img, coverage_img_patches):
         # 如果不是模型不是处于训练阶段
         if not self.training and step == 0:
             h_decoder, c_decoder = s_t_1
@@ -419,7 +478,6 @@ class Decoder(nn.Module):
                                                        enc_padding_mask, coverage)
 
             coverage = coverage_next
-
 
         y_t_1_embd = self.embedding(y_t_1)
         x = self.x_context(torch.cat((c_mm, y_t_1_embd), 1))
@@ -432,24 +490,10 @@ class Decoder(nn.Module):
 
         c_t, attn_dist, coverage_next = self.txt_attention(s_t_hat, encoder_outputs, encoder_feature,
                                                            enc_padding_mask, coverage)
-        # 1*1*(2*hidden_dim)
-        # tensor_shape(c_t)
-        # 1*(2*hidden_dim)
-        # tensor_shape(s_t_hat)
-        # 1*400
-        # tensor_shape(attn_dist)
-        # 1*400
-        # tensor_shape(coverage_next)
+        c_i, attn_img, coverage_img_next, img_patches = self.img_attention(golbal_features, local_features, s_t_hat, coverage_img, coverage_img_patches)
 
-        c_i,  attn_img, coverage_img_next = self.img_attention(golbal_features, local_features, s_t_hat, coverage_img)
-        # 1*(2*hidden_dim)
-        # tensor_shape(c_i)
-        # 1*10
-        # tensor_shape(coverage_img_next)
-        # 1*10
-        # tensor_shape(attn_img)
+
         c_mm = self.multi_attention(c_t, c_i, s_t_hat)
-        # tensor_shape(c_mm)
 
         # 模型处于训练阶段
         if self.training or step > 0:
@@ -468,8 +512,6 @@ class Decoder(nn.Module):
         output = torch.cat((lstm_out.view(-1, config.hidden_dim), c_mm), 1)  # B x hidden_dim * 3
         output = self.out1(output)  # B x hid   den_dim
 
-        # output = F.relu(output)
-
         output = self.out2(output)  # B x vocab_size
         vocab_dist = torch.softmax(output, dim=1)
 
@@ -483,36 +525,36 @@ class Decoder(nn.Module):
             final_dist = vocab_dist_.scatter_add(1, enc_batch_extend_vocab, attn_dist_)
         else:
             final_dist = vocab_dist
-        return final_dist, s_t, c_mm, attn_dist, p_gen, coverage, attn_img, coverage_img
-        # TODO(20200703): 加最后的选择图片部分
+        return final_dist, s_t, c_mm, attn_dist, p_gen, coverage, attn_img, coverage_img, img_patches
 
 
-class Model(object):
-    def __init__(self, model_file_path=None, is_eval=False):
-        txt_encode = txt_encoder()
-        reduce_state = ReduceState()
-        img_encode = img_encoder()
-        decoder = Decoder()
+class MSMO(object):
+    def __init__(self, model_file_path=None, is_eval=False, img_attention_model=config.img_attention_model):
+        model_txt_encode = txt_encoder()
+        model_reduce_state = txt_reduce_state()
+        model_img_encode = img_encoder()
+        model_decoder = msmo_decoder(img_attention_model=img_attention_model)
 
         # shared the embedding between encoder and decoder
-        decoder.embedding.weight = txt_encode.embedding.weight
+        model_decoder.embedding.weight = model_txt_encode.embedding.weight
         # only forward calculate
         if is_eval:
-            txt_encode = txt_encode.eval()
-            reduce_state = reduce_state.eval()
-            img_encode = img_encode.eval()
-            decoder = decoder.eval()
+            model_txt_encode = model_txt_encode.eval()
+            model_reduce_state = model_reduce_state.eval()
+            model_img_encode = model_img_encode.eval()
+            model_decoder = model_decoder.eval()
 
         if use_cuda:
-            txt_encode = txt_encode.cuda()
-            img_encode = img_encode.cuda()
-            decoder = decoder.cuda()
-            reduce_state = reduce_state.cuda()
+            model_txt_encode = model_txt_encode.cuda()
+            model_img_encode = model_img_encode.cuda()
+            model_decoder = model_decoder.cuda()
+            model_reduce_state = model_reduce_state.cuda()
 
-        self.txt_encode = txt_encode
-        self.img_encode = img_encode
-        self.decoder = decoder
-        self.reduce_state = reduce_state
+        self.txt_encode = model_txt_encode
+        self.img_encode = model_img_encode
+        self.decoder = model_decoder
+        self.reduce_state = model_reduce_state
+        self.img_attention_model = img_attention_model
 
         # load model state
         if model_file_path is not None:
@@ -521,3 +563,4 @@ class Model(object):
             self.img_encode.load_state_dict(state['img_encode_state_dict'])
             self.decoder.load_state_dict(state['decoder_state_dict'], strict=False)
             self.reduce_state.load_state_dict(state['reduce_state_dict'])
+        pass

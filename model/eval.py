@@ -36,7 +36,7 @@ class Evaluate(object):
             os.mkdir(eval_dir)
         self.summary_writer = tf.summary.FileWriter(eval_dir)
 
-        self.model = Model(model_file_path)
+        self.model = Model(model_file_path=model_file_path)
         self.model.eval()
 
     def eval_one_batch(self, batch):
