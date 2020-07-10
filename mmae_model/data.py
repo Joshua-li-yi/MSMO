@@ -17,19 +17,20 @@ import numpy as np
 import json as jsonmod
 
 
-def get_paths(path, use_restval=False):
+def get_paths(path, data_name, use_restval=False):
     """
     :param name: Dataset names
     :param use_restval: If True, the the `restval` data is included in train.
     """
     roots = {}
     ids = {}
-    imgdir = os.path.join(path, 'images')
-    cap = os.path.join(path, 'dataset_flickr30k.json')
+    imgdir = '../data/data_preview/img'
+    cap = r'dataset.json'
+
     roots['train'] = {'img': imgdir, 'cap': cap}
     roots['val'] = {'img': imgdir, 'cap': cap}
     roots['test'] = {'img': imgdir, 'cap': cap}
-    ids = {'train': None, 'val': None, 'test': None}
+    # ids = {'train': None, 'val': None, 'test': None}
 
     return roots, ids
 
@@ -66,7 +67,7 @@ class FlickrDataset(data.Dataset):
 
         # Convert caption (string) to word ids.
         tokens = nltk.tokenize.word_tokenize(
-            str(caption).lower().decode('utf-8'))
+            str(caption).lower().encode('utf-8').decode('utf-8'))
         caption = []
 
         caption.append(vocab('<start>'))
@@ -77,55 +78,6 @@ class FlickrDataset(data.Dataset):
 
     def __len__(self):
         return len(self.ids)
-
-
-class PrecompDataset(data.Dataset):
-    """
-    Load precomputed captions and image features
-    Possible options: f8k, f30k, coco, 10crop
-    """
-
-    def __init__(self, data_path, data_split, vocab):
-        self.vocab = vocab
-        loc = data_path + '/'
-
-        # Captions
-        self.captions = []
-        with open(loc+'%s_caps.txt' % data_split, 'rb') as f:
-            for line in f:
-                self.captions.append(line.strip())
-
-        # Image features
-        self.images = np.load(loc+'%s_ims.npy' % data_split)
-        self.length = len(self.captions)
-        # rkiros data has redundancy in images, we divide by 5, 10crop doesn't
-        if self.images.shape[0] != self.length:
-            self.im_div = 5
-        else:
-            self.im_div = 1
-        # the development set for coco is large and so validation would be slow
-        if data_split == 'dev':
-            self.length = 5000
-
-    def __getitem__(self, index):
-        # handle the image redundancy
-        img_id = index/self.im_div
-        image = torch.Tensor(self.images[img_id])
-        caption = self.captions[index]
-        vocab = self.vocab
-
-        # Convert caption (string) to word ids.
-        tokens = nltk.tokenize.word_tokenize(
-            str(caption).lower().decode('utf-8'))
-        caption = []
-        caption.append(vocab('<start>'))
-        caption.extend([vocab(token) for token in tokens])
-        caption.append(vocab('<end>'))
-        target = torch.Tensor(caption)
-        return image, target, index, img_id
-
-    def __len__(self):
-        return self.length
 
 
 def collate_fn(data):
@@ -166,7 +118,6 @@ def get_loader_single(data_name, split, root, json, vocab, transform,
                             vocab=vocab,
                             transform=transform)
 
-
     # Data loader
     data_loader = torch.utils.data.DataLoader(dataset=dataset,
                                               batch_size=batch_size,
@@ -199,13 +150,13 @@ def get_loaders(data_name, vocab, crop_size, batch_size, workers, opt):
     dpath = os.path.join(opt.data_path, data_name)
 
     # Build Dataset Loader
-    roots, ids = get_paths(dpath, data_name, opt.use_restval)
+    roots, _ = get_paths(dpath, data_name, opt.use_restval)
 
     transform = get_transform(data_name, 'train', opt)
     train_loader = get_loader_single(opt.data_name, 'train',
                                      roots['train']['img'],
                                      roots['train']['cap'],
-                                     vocab, transform, ids=ids['train'],
+                                     vocab, transform, ids=None,
                                      batch_size=batch_size, shuffle=True,
                                      num_workers=workers,
                                      collate_fn=collate_fn)
@@ -214,7 +165,7 @@ def get_loaders(data_name, vocab, crop_size, batch_size, workers, opt):
     val_loader = get_loader_single(opt.data_name, 'val',
                                    roots['val']['img'],
                                    roots['val']['cap'],
-                                   vocab, transform, ids=ids['val'],
+                                   vocab, transform, ids=None,
                                    batch_size=batch_size, shuffle=False,
                                    num_workers=workers,
                                    collate_fn=collate_fn)
@@ -227,13 +178,13 @@ def get_test_loader(split_name, data_name, vocab, crop_size, batch_size,
     dpath = os.path.join(opt.data_path, data_name)
 
     # Build Dataset Loader
-    roots, ids = get_paths(dpath, data_name, opt.use_restval)
+    roots, _ = get_paths(dpath, data_name, opt.use_restval)
 
     transform = get_transform(data_name, split_name, opt)
     test_loader = get_loader_single(opt.data_name, split_name,
                                     roots[split_name]['img'],
                                     roots[split_name]['cap'],
-                                    vocab, transform, ids=ids[split_name],
+                                    vocab, transform, ids=None,
                                     batch_size=batch_size, shuffle=False,
                                     num_workers=workers,
                                     collate_fn=collate_fn)

@@ -10,7 +10,7 @@ import time
 import torch
 import torch.optim
 from torch.nn.utils import clip_grad_norm_
-from data_util import config
+import config
 from msmo_model.msmo import MSMO
 from data_util.batcher import Batcher
 from data_util.data import Vocab
@@ -37,14 +37,15 @@ class Train(object):
         self.img_attention_model = img_attention_model
         print_info('vocab generate ...')
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
+        self.vocab.write_metadata(fpath=config.word_id_path)
         self.pictures = []
         print_info('vocab generate finish')
-        self.batcher = Batcher(config.train_data_path_ATL, self.vocab, mode='train',
+        self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',
                                batch_size=config.batch_size, single_pass=False)
 
         pass
 
-    def save_model(self, iter, model_filepath=config.modle_path):
+    def save_model(self, iter, model_filepath=config.msmo_modle_path):
         state = {
             'txt_encode_state_dict': self.model.txt_encode.state_dict(),
             'img_encode_state_dict': self.model.img_encode.state_dict(),
@@ -106,6 +107,7 @@ class Train(object):
                     step_loss = step_loss + config.cov_loss_wt * step_coverage_loss_img_patches
                     tensor_shape(step_loss)
                     coverage_img_patches = img_patches[1]
+                    pass
 
             step_mask = dec_padding_mask[:, di]
             step_loss = step_loss * step_mask
@@ -153,7 +155,6 @@ class Train(object):
 if __name__ == '__main__':
     train_processor = Train(img_attention_model=config.img_attention_model)
     train_processor.train_iters(iters=30)
-    print_info(f'begin save model in {config.modle_path}')
     train_processor.save_model(30, model_filepath=config.modle_path)
-    print_info('='*50)
+
 

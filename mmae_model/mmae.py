@@ -16,12 +16,14 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm
 import numpy as np
-from collections import OrderedDict
-from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.linear_model import LinearRegression
 from sklearn.neural_network import MLPRegressor
-from data_util import config
+import config
 import pandas as pd
+from sumeval.metrics.rouge import RougeCalculator
+# from mmae_model.eval import LogCollector
 
+device = torch.device(['cpu', 'cuda'][torch.cuda.is_available()])
 
 def l2norm(X):
     """L2-normalize columns of X
@@ -55,7 +57,7 @@ class EncoderImageFull(nn.Module):
         self.use_abs = use_abs
 
         # Load a pre-trained model
-        self.cnn = self.get_cnn(cnn_type, True)
+        self.cnn = self.get_cnn(cnn_type, False)
 
         # For efficient memory usage.
         for param in self.cnn.parameters():
@@ -67,6 +69,7 @@ class EncoderImageFull(nn.Module):
                                 embed_size)
             self.cnn.classifier = nn.Sequential(
                 *list(self.cnn.classifier.children())[:-1])
+
         elif cnn_type.startswith('resnet'):
             self.fc = nn.Linear(self.cnn.module.fc.in_features, embed_size)
             self.cnn.module.fc = nn.Sequential()
@@ -77,17 +80,19 @@ class EncoderImageFull(nn.Module):
         """Load a pretrained CNN and parallelize over GPUs
         """
         if pretrained:
-            print("=> using pre-trained model '{}'".format(arch))
+            print("=> using pre-trained moedel '{}'".format(arch))
             model = models.__dict__[arch](pretrained=True)
         else:
             print("=> creating model '{}'".format(arch))
-            model = models.__dict__[arch]()
+            # model = models.__dict__[arch]()
+            model = models.vgg19(pretrained=False)
+            model.load_state_dict(torch.load(r'../msmo_model/vgg19.pth'))
 
-        if arch.startswith('alexnet') or arch.startswith('vgg'):
-            model.features = nn.DataParallel(model.features)
-            model.cuda()
-        else:
-            model = nn.DataParallel(model).cuda()
+        # if arch.startswith('alexnet') or arch.startswith('vgg'):
+        #     model.features = nn.DataParallel(model.features)
+        #     if torch.cuda.is_available(): model.cuda()
+        # else:
+        #     model = nn.DataParallel(model).cuda()
 
         return model
 
@@ -174,7 +179,7 @@ class EncoderText(nn.Module):
         # Reshape *final* output to (batch_size, hidden_size)
         padded = pad_packed_sequence(out, batch_first=True)
         I = torch.LongTensor(lengths).view(-1, 1, 1)
-        I = Variable(I.expand(x.size(0), 1, self.embed_size) - 1).cuda()
+        I = Variable(I.expand(x.size(0), 1, self.embed_size) - 1).to(device)
         out = torch.gather(padded[0], 1, I).squeeze(1)
 
         # normalization in the joint embedding space
@@ -233,9 +238,8 @@ class ContrastiveLoss(nn.Module):
 
         # clear diagonals
         mask = torch.eye(scores.size(0)) > .5
-        I = Variable(mask)
-        if torch.cuda.is_available():
-            I = I.cuda()
+        I = Variable(mask).to(device)
+
         cost_s = cost_s.masked_fill_(I, 0)
         cost_im = cost_im.masked_fill_(I, 0)
 
@@ -255,6 +259,7 @@ class VSE(object):
     def __init__(self, opt):
         # tutorials/09 - Image Captioning
         # Build Models
+        self.logger = None
         self.grad_clip = opt.grad_clip
         self.img_enc = EncoderImage(opt.data_name, opt.img_dim, opt.embed_size,
                                     opt.finetune, opt.cnn_type,
@@ -263,10 +268,10 @@ class VSE(object):
         self.txt_enc = EncoderText(opt.vocab_size, opt.word_dim,
                                    opt.embed_size, opt.num_layers,
                                    use_abs=opt.use_abs)
-        if torch.cuda.is_available():
-            self.img_enc.cuda()
-            self.txt_enc.cuda()
-            cudnn.benchmark = True
+
+        self.img_enc.to(device)
+        self.txt_enc.to(device)
+        cudnn.benchmark = True
 
         # Loss and Optimizer
         self.criterion = ContrastiveLoss(margin=opt.margin,
@@ -308,9 +313,9 @@ class VSE(object):
         # Set mini-batch dataset
         images = Variable(images, volatile=volatile)
         captions = Variable(captions, volatile=volatile)
-        if torch.cuda.is_available():
-            images = images.cuda()
-            captions = captions.cuda()
+
+        images = images.to(device)
+        captions = captions.to(device)
 
         # Forward
         img_emb = self.img_enc(images)
@@ -321,7 +326,7 @@ class VSE(object):
         """Compute the loss given pairs of image and caption embeddings
         """
         loss = self.criterion(img_emb, cap_emb)
-        self.logger.update('Le', loss.data[0], img_emb.size(0))
+        # self.logger.update('Le', loss.data[0], img_emb.size(0))
         return loss
 
     def train_emb(self, images, captions, lengths, ids=None, *args):
@@ -347,19 +352,44 @@ class VSE(object):
 
 class txt_salience(object):
     def __init__(self):
+
+        rouge = RougeCalculator(stopwords=True, lang="en")
+
+        rouge_1 = rouge.rouge_n(
+            summary="I went to the Mars from my living town.",
+            references="I went to Mars",
+            n=1)
+
+        rouge_2 = rouge.rouge_n(
+            summary="I went to the Mars from my living town.",
+            references=["I went to Mars", "It's my living town"],
+            n=2)
+
+        rouge_l = rouge.rouge_l(
+            summary="I went to the Mars from my living town.",
+            references=["I went to Mars", "It's my living town"])
+
         pass
+
 
 class image_salinece(object):
     def __init__(self):
+
         pass
 
 class image_txt_relevance(object):
     def __init__(self):
+        # construct model
+        vse0 = VSE()
+        # load model state
+        vse0.load_state_dict()
+
         pass
 
 
 class MMAE(object):
     def __init__(self, mmae_method=config.mmae_method):
+
         self.salience_of_txt = txt_salience()
         self.salience_of_img = image_salinece()
         self.relevance_img_txt = image_txt_relevance()
@@ -369,7 +399,8 @@ class MMAE(object):
             'Logis': self.Logis_model,
             'MLP': self.MLP_model
         }
-        return method_dict[mmae_method]()
+        self.model = method_dict[mmae_method]()
+        pass
 
     def LR_model(self):
         lr = LinearRegression()
@@ -385,3 +416,6 @@ class MMAE(object):
         mlp = MLPRegressor()
         mlp.fit(x=[self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
         return mlp
+
+    def save_mmae(self):
+        open

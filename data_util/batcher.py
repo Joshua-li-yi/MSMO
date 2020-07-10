@@ -10,7 +10,8 @@ import time
 from random import shuffle
 from threading import Thread
 import numpy as np
-from data_util import data, config
+from data_util import data
+import config
 import random
 import torch
 random.seed(config.SEED)

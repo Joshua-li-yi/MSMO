@@ -7,20 +7,22 @@
 
 import os
 
-root_dir = r'D:/githubProject/MSMO/'
+root_dir = r'../'
 
-train_data_path = os.path.join(root_dir, r"data/data_preview/finished_files/train/train.json")
-train_data_path_ATL = os.path.join(root_dir, r"data/data_preview/finished_files/train/train_ATL.json")
+train_data_path_ATG = os.path.join(root_dir, r"data/data_preview/msmo_data/train/train_ATG.json")
+train_data_path_ATL_HAN = os.path.join(root_dir, r"data/data_preview/msmo_data/train/train_ATL_HAN.json")
+
+valid_data_path_ATG = os.path.join(root_dir, r"data/data_preview/msmo_data/valid/valid_ATG.json")
+valid_data_path_ATL_HAN = os.path.join(root_dir, r"data/data_preview/msmo_data/valid/valid_ATL_HAN.json")
+
+test_data_path_ATG = os.path.join(root_dir, r"data/data_preview/msmo_data/test/test_ATG.json")
+test_data_path_ATL_HAN = os.path.join(root_dir, r"data/data_preview/msmo_data/test/test_ATL_HAN.json")
+
 # vocab的路径
-vocab_path = os.path.join(root_dir, r"data/data_preview/finished_files/vocab.txt")
+vocab_path = os.path.join(root_dir, r"data/data_preview/msmo_data/vocab.txt")
 word_id_path = os.path.join(root_dir,r'data/data_preview/word_id.csv')
 
-msmo_logging_path = os.path.join(root_dir, r"msmo_model/logging.log")
-
-train_caption_path = os.path.join(root_dir, r'data/data_preview/caption/')
-train_img_path = os.path.join(root_dir, r'data/data_preview/img/')
-train_article_path = os.path.join(root_dir, r'data/data_preview/article/')
-train_url_path = os.path.join(root_dir, r'data/data_preview/url/')
+msmo_logging_path = os.path.join('', r"logging.log")
 
 # Hyperparameters
 hidden_dim = 256
@@ -66,8 +68,11 @@ model_maxinum_imgs = {
 img_attention_model = img_attention_models[1]
 maxinum_imgs = model_maxinum_imgs[img_attention_model]
 
-# MMAE模型的选择
+train_data_path = [train_data_path_ATL_HAN, train_data_path_ATG][img_attention_model == 'ATG']
+msmo_modle_path = os.path.join(root_dir, r'msmo_model/')
+
+#################### MMAE ##################3
 mmae_methods = ['LR', 'Logis', 'MLP']
 mmae_method = mmae_methods[0]
+mmae_model_path = os.path.join(root_dir, r'mmae_model/')
 
-modle_path = os.path.join(root_dir, r'msmo_model/')

@@ -7,7 +7,7 @@
  
 import ujson
 import os
-from data_util import config
+import config
 import subprocess
 import hashlib
 import collections
@@ -21,11 +21,11 @@ END_TOKENS = ['.', '!', '?', '...', "'", "`", '"', dm_single_close_quote, dm_dou
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
 
-root_dir = config.root_dir+r'data/data_preview/'
+root_dir = config.root_dir + r'data/data_preview/'
 all_urls = root_dir + r"url/url_list"
 
 tokenized_articles_dir = root_dir + r"tokenized/"
-finished_files_dir = root_dir +r"finished_files/"
+finished_files_dir = root_dir +r"msmo_data/"
 train_data_dir = finished_files_dir + r'train/'
 valid_data_dir = finished_files_dir + r'valid/'
 test_data_dir = finished_files_dir + r'test/'
@@ -158,7 +158,7 @@ def tokenize_articles(stories_dir, tokenized_stories_dir, url_file=None, output_
     flag = 0
     imgs_list = os.listdir(imgs_dir)
     for story in stories:
-        imgs = imgs_list[flag: flag+config.maxinum_imgs]
+        imgs = imgs_list[flag: flag + config.maxinum_imgs]
         # for img in os.listdir(imgs_dir):
         #     if story[:-4] == img[:len(story[:-4])]:
         #         # print(img)
@@ -198,13 +198,13 @@ def tokenize_articles(stories_dir, tokenized_stories_dir, url_file=None, output_
     print(len(train_list))
 
     # Writing JSON data
-    with open(train_data_dir+'train_ATL.json', 'w') as f:
+    with open(train_data_dir+'train_ATL_HAN.json', 'w') as f:
         ujson.dump(train_list[:150], f, indent=4)
 
-    with open(valid_data_dir + 'valid_ATL.json', 'w') as f:
+    with open(valid_data_dir + 'valid_ATL_HAN.json', 'w') as f:
         ujson.dump(train_list[150:175], f, indent=4)
 
-    with open(test_data_dir+'test_ATL.json', 'w') as f:
+    with open(test_data_dir+'test_ATL_HAN.json', 'w') as f:
         ujson.dump(train_list[175:], f, indent=4)
 
     print("Successfully save data ")

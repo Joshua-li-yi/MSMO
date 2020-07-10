@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torchvision import models
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 # 导入配置
-from data_util import config
+import config
 from numpy import random
 from msmo_model.train_util import tensor_shape
 
@@ -108,7 +108,7 @@ class img_encoder(nn.Module):
         print('load vgg19...')
         net = models.vgg19(pretrained=False)
         net.load_state_dict(torch.load(r'vgg19.pth'))
-        # FIXME (ly, 20200626): 这里的第几层不是很确定, 但是维度是对的
+
         local_features_net = net.features[:37]
         global_features_net = net.classifier[:2]
         self.global_features_net = global_features_net
@@ -124,7 +124,6 @@ class img_encoder(nn.Module):
         :return global_features: 全局特征 4096 dimensions
                 local_features: 局部特征 A = (a_1, …… ，a_L) L = 49, a_l (512) dimensions
         """
-        # FIXME 维度问题
         local_features = self.local_features_net(input)
         # 维度转化
         local_features_output = local_features.view(-1, 2 * config.hidden_dim, 49)  # B*49*(2*hidden_dim)
@@ -186,7 +185,7 @@ class img_attention(nn.Module):
         self.g_star = nn.Linear(in_features=self.d_h, out_features=1)
 
         self.w_g_star = nn.Linear(in_features=512, out_features=512, bias=False)
-        self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs*512, bias=False)
+        self.w_s_t = nn.Linear(in_features=config.hidden_dim * 2, out_features=config.maxinum_imgs * 512, bias=False)
         self.v = nn.Linear(in_features=512, out_features=512, bias=False)
 
         self.w_g_star_i = nn.Linear(in_features=512, out_features=1, bias=False)

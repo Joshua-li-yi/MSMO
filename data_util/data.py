@@ -11,7 +11,8 @@ import ujson
 from torch.autograd import Variable
 from PIL import Image
 import torch
-from data_util import config
+import config
+import pandas as pd
 # <s> and </s> are used in the data files to segment the abstracts into sentences. They don't receive vocab ids.
 SENTENCE_START = '<s>'
 SENTENCE_END = '</s>'
@@ -83,19 +84,16 @@ class Vocab(object):
     def size(self):
         return self._count
 
-    def write_metadata(self, fpath):
+    def write_metadata(self, fpath=config.word_id_path):
         """
         输出词汇 对应的id的文件
         :param fpath: 写入词汇文件的路径
         :return:
         """
         print("Writing word embedding metadata file to %s..." % (fpath))
-        with open(fpath, "w", encoding='utf-8') as f:
-            fieldnames = ['word']
-            writer = csv.DictWriter(f, delimiter=",", fieldnames=fieldnames)
-
-            for i in range(self.size()):
-                writer.writerow({"word": self._id_to_word[i]})
+        word_id_df = pd.DataFrame(self._id_to_word.values(), index=self._id_to_word.keys())
+        word_id_df.to_csv(fpath)
+        pass
 
 
 def example_generator(data_path, single_pass=True):
@@ -210,14 +208,7 @@ def show_abs_oovs(abstract, vocab, article_oovs):
 
 class image_data(object):
     """
-    A PyTorch dataset class to be used in the PyTorch DataLoader to create batches.
-
-    Member variables:
-    self.image_paths (2D list) : A 2D list containing image paths of all the videos.
-                                 The first index represents the video, and the
-                                 second index represents the keyframe.
-    self.num_videos (int) : The total number of videos across courses in the dataset.
-
+    a class to process img data
     """
     def __init__(self, imgs_path):
         """
@@ -233,7 +224,7 @@ class image_data(object):
 
         :param height: int
         :param wight: int
-        :return: imgs_torch: Tensor imgs处理后的tensor
+        :return: imgs_torch: Tensor (B*M,3, 224, 244) imgs处理后的tensor
         """
         imgs = []
         for img_path in self.imgs_path:
@@ -251,6 +242,7 @@ class image_data(object):
 
             img_transforms.unsqueeze_(0)
             imgs.append(img_transforms)
+
         imgs_torch = torch.cat(imgs, dim=0)
         imgs_torch = Variable(imgs_torch)
         return imgs_torch

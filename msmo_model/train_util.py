@@ -7,17 +7,22 @@
 
 from torch.autograd import Variable
 import numpy as np
-import torch
-from data_util import config
+import config
 import time
 import torch
 import logging
-
+import inspect
 
 def print_info(info):
+    """
+    print info and also logging
+    :param info: (str)
+    :return:
+    """
     logging.info(info)
     print(info)
     pass
+
 
 def timer(func):
     def wrapper(*args, **kwargs):
@@ -28,7 +33,7 @@ def timer(func):
     return wrapper
 
 
-import inspect
+
 def retrieve_name_ex(var):
     stacks = inspect.stack()
     try:
@@ -43,6 +48,11 @@ def retrieve_name_ex(var):
 
 
 def tensor_shape(value):
+    """
+    get a tensor shape
+    :param value: (tensor)
+    :return:
+    """
     print('-'*100)
     print("{} shape:  {}".format(retrieve_name_ex(value), value.shape))
     print('-'*100)
@@ -73,7 +83,7 @@ def get_input_from_batch(batch, use_cuda):
     if config.is_coverage:
         coverage_txt = Variable(torch.zeros(enc_batch.size()))
         if config.img_attention_model == 'ATL':
-            coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs*49))
+            coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs * 49))
         elif config.img_attention_model == 'ATG':
             coverage_img = Variable(torch.zeros(config.batch_size, config.maxinum_imgs))
         elif config.img_attention_model == 'HAN':
@@ -97,6 +107,7 @@ def get_input_from_batch(batch, use_cuda):
         return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img, coverage_patches
     else:
         return enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img, ()
+
 
 def get_output_from_batch(batch, use_cuda):
     dec_batch = Variable(torch.from_numpy(batch.dec_batch).long())

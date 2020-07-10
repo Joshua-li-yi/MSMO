@@ -9,6 +9,7 @@ import os
 import pyrouge
 import logging
 
+
 def print_results(article, abstract, decoded_output):
     print("")
     print('ARTICLE:  %s', article)

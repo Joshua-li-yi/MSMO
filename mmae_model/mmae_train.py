@@ -18,7 +18,7 @@ from mmae_model.mmae import VSE
 from mmae_model.eval import i2t, t2i, AverageMeter, LogCollector, encode_data
 
 import logging
-import tensorboard_logger as tb_logger
+# import tensorboard as tb_logger
 from mmae_model import data
 import argparse
 
@@ -26,10 +26,12 @@ import argparse
 def main():
     # Hyper Parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', default='/w/31/faghri/vsepp_data/',
+    parser.add_argument('--data_path', default='./',
                         help='path to datasets')
-    parser.add_argument('--data_name', default='precomp',
+
+    parser.add_argument('--data_name', default='mmae',
                         help='{coco,f8k,f30k,10crop}_precomp|coco|f8k|f30k')
+
     parser.add_argument('--vocab_path', default='./vocab/',
                         help='Path to saved vocabulary pickle files.')
     parser.add_argument('--margin', default=0.2, type=float,
@@ -54,11 +56,11 @@ def main():
                         help='Number of epochs to update the learning rate.')
     parser.add_argument('--workers', default=10, type=int,
                         help='Number of data loader workers.')
-    parser.add_argument('--log_step', default=10, type=int,
+    parser.add_argument('--log_step', default=1, type=int,
                         help='Number of steps to print and record the log.')
-    parser.add_argument('--val_step', default=500, type=int,
+    parser.add_argument('--val_step', default=10, type=int,
                         help='Number of steps to run validation.')
-    parser.add_argument('--logger_name', default='runs/runX',
+    parser.add_argument('--logger_name', default='',
                         help='Path to save the model and Tensorboard log.')
     parser.add_argument('--resume', default='', type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
@@ -86,13 +88,12 @@ def main():
     print(opt)
 
     logging.basicConfig(format='%(asctime)s %(message)s', level=logging.INFO)
-    tb_logger.configure(opt.logger_name, flush_secs=5)
+    # tb_logger.configure(opt.logger_name, flush_secs=5)
 
     # Load Vocabulary Wrapper
     vocab = pickle.load(open(os.path.join(
         opt.vocab_path, '%s_vocab.pkl' % opt.data_name), 'rb'))
     opt.vocab_size = len(vocab)
-
     # Load data loaders
     train_loader, val_loader = data.get_loaders(
         opt.data_name, vocab, opt.crop_size, opt.batch_size, opt.workers, opt)
@@ -100,26 +101,10 @@ def main():
     # Construct the model
     model = VSE(opt)
 
-    # optionally resume from a checkpoint
-    if opt.resume:
-        if os.path.isfile(opt.resume):
-            print("=> loading checkpoint '{}'".format(opt.resume))
-            checkpoint = torch.load(opt.resume)
-            start_epoch = checkpoint['epoch']
-            best_rsum = checkpoint['best_rsum']
-            model.load_state_dict(checkpoint['model'])
-            # Eiters is used to show logs as the continuation of another
-            # training
-            model.Eiters = checkpoint['Eiters']
-            print("=> loaded checkpoint '{}' (epoch {}, best_rsum {})"
-                  .format(opt.resume, start_epoch, best_rsum))
-            validate(opt, val_loader, model)
-        else:
-            print("=> no checkpoint found at '{}'".format(opt.resume))
-
     # Train the Model
     best_rsum = 0
     for epoch in range(opt.num_epochs):
+        print(epoch)
         adjust_learning_rate(opt, model.optimizer, epoch)
 
         # train for one epoch
@@ -178,13 +163,20 @@ def train(opt, train_loader, model, epoch, val_loader):
                 .format(
                     epoch, i, len(train_loader), batch_time=batch_time,
                     data_time=data_time, e_log=str(model.logger)))
+            print('Epoch: [{0}][{1}/{2}]\t'
+                '{e_log}\t'
+                'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
+                'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                .format(
+                    epoch, i, len(train_loader), batch_time=batch_time,
+                    data_time=data_time, e_log=str(model.logger)))
 
-        # Record logs in tensorboard
-        tb_logger.log_value('epoch', epoch, step=model.Eiters)
-        tb_logger.log_value('step', i, step=model.Eiters)
-        tb_logger.log_value('batch_time', batch_time.val, step=model.Eiters)
-        tb_logger.log_value('data_time', data_time.val, step=model.Eiters)
-        model.logger.tb_log(tb_logger, step=model.Eiters)
+        # # Record logs in tensorboard
+        # tb_logger.log_value('epoch', epoch, step=model.Eiters)
+        # tb_logger.log_value('step', i, step=model.Eiters)
+        # tb_logger.log_value('batch_time', batch_time.val, step=model.Eiters)
+        # tb_logger.log_value('data_time', data_time.val, step=model.Eiters)
+        # model.logger.tb_log(tb_logger, step=model.Eiters)
 
         # validate at every val_step
         if model.Eiters % opt.val_step == 0:
@@ -212,17 +204,17 @@ def validate(opt, val_loader, model):
     currscore = r1 + r5 + r10 + r1i + r5i + r10i
 
     # record metrics in tensorboard
-    tb_logger.log_value('r1', r1, step=model.Eiters)
-    tb_logger.log_value('r5', r5, step=model.Eiters)
-    tb_logger.log_value('r10', r10, step=model.Eiters)
-    tb_logger.log_value('medr', medr, step=model.Eiters)
-    tb_logger.log_value('meanr', meanr, step=model.Eiters)
-    tb_logger.log_value('r1i', r1i, step=model.Eiters)
-    tb_logger.log_value('r5i', r5i, step=model.Eiters)
-    tb_logger.log_value('r10i', r10i, step=model.Eiters)
-    tb_logger.log_value('medri', medri, step=model.Eiters)
-    tb_logger.log_value('meanr', meanr, step=model.Eiters)
-    tb_logger.log_value('rsum', currscore, step=model.Eiters)
+    # tb_logger.log_value('r1', r1, step=model.Eiters)
+    # tb_logger.log_value('r5', r5, step=model.Eiters)
+    # tb_logger.log_value('r10', r10, step=model.Eiters)
+    # tb_logger.log_value('medr', medr, step=model.Eiters)
+    # tb_logger.log_value('meanr', meanr, step=model.Eiters)
+    # tb_logger.log_value('r1i', r1i, step=model.Eiters)
+    # tb_logger.log_value('r5i', r5i, step=model.Eiters)
+    # tb_logger.log_value('r10i', r10i, step=model.Eiters)
+    # tb_logger.log_value('medri', medri, step=model.Eiters)
+    # tb_logger.log_value('meanr', meanr, step=model.Eiters)
+    # tb_logger.log_value('rsum', currscore, step=model.Eiters)
 
     return currscore
 
