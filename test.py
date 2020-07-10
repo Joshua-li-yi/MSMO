@@ -6,7 +6,3 @@
 # @Project: MSMO
 # Owed by: http://blog.csdn.net/chunyexiyu
 # direct get the input name from called function code
-
-
-list1 = [1]
-print(list1.data[0])

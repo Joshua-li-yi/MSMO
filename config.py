@@ -74,5 +74,5 @@ msmo_modle_path = os.path.join(root_dir, r'msmo_model/')
 #################### MMAE ##################3
 mmae_methods = ['LR', 'Logis', 'MLP']
 mmae_method = mmae_methods[0]
-mmae_model_path = os.path.join(root_dir, r'mmae_model/')
+mmae_model_path = os.path.join(root_dir, r'')
 

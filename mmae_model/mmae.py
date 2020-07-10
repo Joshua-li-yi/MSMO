@@ -21,6 +21,7 @@ from sklearn.neural_network import MLPRegressor
 import config
 import pandas as pd
 from sumeval.metrics.rouge import RougeCalculator
+import pickle
 # from mmae_model.eval import LogCollector
 
 device = torch.device(['cpu', 'cuda'][torch.cuda.is_available()])
@@ -418,4 +419,9 @@ class MMAE(object):
         return mlp
 
     def save_mmae(self):
-        open
+        with open(config.mmae_model_path+'mmae.model', 'w') as model:
+            pickle.dump(self.model, model)
+
+    def load_mmae(self):
+        with open(config.mmae_model_path+'mmae.model', 'r') as model:
+            pickle.load(self.model, model)
