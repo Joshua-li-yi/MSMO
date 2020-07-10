@@ -4,7 +4,8 @@
 # @FileName: make_datafiles.py
 # @Software: PyCharm
 # @Project: MSMO
- 
+# @Description: product the used data for train
+
 import ujson
 import os
 import config
@@ -228,5 +229,5 @@ if __name__ == '__main__':
     if not os.path.exists(train_data_dir): os.makedirs(train_data_dir)
     if not os.path.exists(valid_data_dir): os.makedirs(valid_data_dir)
     if not os.path.exists(test_data_dir): os.makedirs(test_data_dir)
-    # Run stanford tokenizer on both stories dirs, outputting to tokenized stories directories
+    # Run stanford tokenizer on both stories dirs, outputting to tokenized stories directories, and the final data
     tokenize_articles(articles_dir, tokenized_articles_dir, url_file=all_urls, delete_map=False)

@@ -4,6 +4,7 @@
 # @FileName: msmo_train.py
 # @Software: PyCharm
 # @Project: MSMO
+# @Description: the train of MSMO model
 
 import os
 import time
@@ -38,6 +39,7 @@ class Train(object):
         print_info('vocab generate ...')
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
         self.vocab.write_metadata(fpath=config.word_id_path)
+        # store the predict picture
         self.pictures = []
         print_info('vocab generate finish')
         self.batcher = Batcher(config.train_data_path, self.vocab, mode='train',

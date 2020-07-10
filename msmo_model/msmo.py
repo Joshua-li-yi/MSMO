@@ -4,6 +4,8 @@
 # @FileName: msmo.py
 # @Software: PyCharm
 # @Project: MSMO
+# @Description: the main struct of MSMO model
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

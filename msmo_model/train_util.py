@@ -4,6 +4,7 @@
 # @FileName: train_util.py
 # @Software: PyCharm
 # @Project: MSMO
+# @Description: some additional function used in model
 
 from torch.autograd import Variable
 import numpy as np

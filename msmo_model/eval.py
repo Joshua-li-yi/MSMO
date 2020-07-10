@@ -4,7 +4,7 @@
 # @FileName: eval.py
 # @Software: PyCharm
 # @Project: MSMO
-# @Description: 
+# @Description: the MSMO model eval process
 
 import os
 import time
@@ -30,7 +30,8 @@ class Evaluate(object):
                                batch_size=config.batch_size, single_pass=True)
         time.sleep(1)
         model_name = os.path.basename(model_file_path)
-
+        # store the predict picture
+        self.pictures = []
         eval_dir = os.path.join(config.log_root, 'eval_%s' % (model_name))
         if not os.path.exists(eval_dir):
             os.mkdir(eval_dir)
