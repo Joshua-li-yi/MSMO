@@ -5,4 +5,3 @@
 # @Software: PyCharm
 # @Project: MSMO
 # Owed by: http://blog.csdn.net/chunyexiyu
-# direct get the input name from called function code

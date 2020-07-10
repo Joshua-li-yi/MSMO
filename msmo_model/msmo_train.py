@@ -19,6 +19,7 @@ from data_util.utils import calc_running_avg_loss
 from msmo_model.train_util import get_input_from_batch, get_output_from_batch, tensor_shape, print_info
 import logging
 
+
 logging.basicConfig(level=logging.INFO,  # logging level
                     filename=config.msmo_logging_path,
                     filemode='a',
@@ -38,7 +39,8 @@ class Train(object):
         self.img_attention_model = img_attention_model
         print_info('vocab generate ...')
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
-        self.vocab.write_metadata(fpath=config.word_id_path)
+        # save word id
+        # self.vocab.write_metadata(fpath=config.word_id_path)
         # store the predict picture
         self.pictures = []
         print_info('vocab generate finish')
@@ -51,11 +53,15 @@ class Train(object):
         state = {
             'txt_encode_state_dict': self.model.txt_encode.state_dict(),
             'img_encode_state_dict': self.model.img_encode.state_dict(),
-            'decoder_state_dict': self.model.decoder.state_dict(),
             'reduce_state_dict': self.model.reduce_state.state_dict(),
+            # 'txt_attention_dict': self.model.decoder.txt_attention.state_dict(),
+            # 'img_attention_dict': self.model.decoder.img_attention.state_dict(),
+            'decoder_state_dict': self.model.decoder.state_dict()
         }
-        model_save_path = os.path.join(model_filepath, 'model_%d_%d.pth' % (iter, int(time.time())))
+        save_time = time.time()
+        model_save_path = os.path.join(model_filepath, 'model_%s_%d_%d.pth' % (self.model.img_attention_model, iter, int(save_time)))
         torch.save(state, model_save_path)
+        print_info(f'model model_{self.model.img_attention_model}_{iter}_{int(save_time)} saved in {model_filepath}')
         pass
 
     def setup_train(self):
@@ -96,7 +102,7 @@ class Train(object):
             target = target_batch[:, di]
             gold_probs = torch.gather(final_dist, 1, target.unsqueeze(1)).squeeze()
 
-            step_loss = -torch.log(gold_probs + config.eps) #B
+            step_loss = -torch.log(gold_probs + config.eps)  # B
             if config.is_coverage:
                 step_coverage_loss_txt = torch.sum(torch.min(attn_dist, coverage_txt), 1) # B
                 step_coverage_loss_img = torch.sum(torch.min(attn_img, coverage_img), 1) # B
@@ -104,11 +110,9 @@ class Train(object):
                 coverage_txt = next_coverage_txt
                 coverage_img = next_coverage_img
                 if config.img_attention_model == 'HAN':
-
-                    step_coverage_loss_img_patches = torch.sum(torch.min(img_patches[0], img_patches[1]), (1, 2))
-                    step_loss = step_loss + config.cov_loss_wt * step_coverage_loss_img_patches
-                    tensor_shape(step_loss)
                     coverage_img_patches = img_patches[1]
+                    step_coverage_loss_img_patches = torch.sum(torch.min(img_patches[0], coverage_img_patches), (1, 2))
+                    step_loss = step_loss + config.cov_loss_wt * step_coverage_loss_img_patches
                     pass
 
             step_mask = dec_padding_mask[:, di]
@@ -156,7 +160,7 @@ class Train(object):
 
 if __name__ == '__main__':
     train_processor = Train(img_attention_model=config.img_attention_model)
-    train_processor.train_iters(iters=30)
-    train_processor.save_model(30, model_filepath=config.modle_path)
+    train_processor.train_iters(iters=2)
+    train_processor.save_model(2, model_filepath=config.msmo_modle_path)
 
 

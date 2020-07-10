@@ -28,7 +28,7 @@ msmo_logging_path = os.path.join('', r"logging.log")
 hidden_dim = 256
 emb_dim = 128
 
-batch_size = 1
+batch_size = 2
 
 max_enc_steps = 400
 max_dec_steps = 100
@@ -65,12 +65,14 @@ model_maxinum_imgs = {
     'HAN': 7
 }
 # 选择所用的模型
-img_attention_model = img_attention_models[1]
+img_attention_model = img_attention_models[2]
 maxinum_imgs = model_maxinum_imgs[img_attention_model]
 
 train_data_path = [train_data_path_ATL_HAN, train_data_path_ATG][img_attention_model == 'ATG']
-msmo_modle_path = os.path.join(root_dir, r'msmo_model/')
-
+valid_data_path = [valid_data_path_ATL_HAN, valid_data_path_ATG][img_attention_model == 'ATG']
+test_data_path = [test_data_path_ATL_HAN, test_data_path_ATG][img_attention_model == 'ATG']
+msmo_modle_path = os.path.join('', r'')
+img_path = root_dir+'data/data_preview/img/'
 #################### MMAE ##################3
 mmae_methods = ['LR', 'Logis', 'MLP']
 mmae_method = mmae_methods[0]

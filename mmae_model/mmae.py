@@ -22,9 +22,11 @@ import config
 import pandas as pd
 from sumeval.metrics.rouge import RougeCalculator
 import pickle
+
 # from mmae_model.eval import LogCollector
 
 device = torch.device(['cpu', 'cuda'][torch.cuda.is_available()])
+
 
 def l2norm(X):
     """L2-normalize columns of X
@@ -43,7 +45,6 @@ def EncoderImage(data_name, img_dim, embed_size, finetune=False,
 
     img_enc = EncoderImageFull(embed_size, finetune, cnn_type, use_abs, no_imgnorm)
     return img_enc
-
 
 
 # tutorials/09 - Image Captioning
@@ -351,9 +352,9 @@ class VSE(object):
         self.optimizer.step()
 
 
+# TODO (20200710)
 class txt_salience(object):
     def __init__(self):
-
         rouge = RougeCalculator(stopwords=True, lang="en")
 
         rouge_1 = rouge.rouge_n(
@@ -373,11 +374,13 @@ class txt_salience(object):
         pass
 
 
+# TODO (20200710)
 class image_salinece(object):
     def __init__(self):
-
         pass
 
+
+# TODO (20200710)
 class image_txt_relevance(object):
     def __init__(self):
         # construct model
@@ -388,9 +391,9 @@ class image_txt_relevance(object):
         pass
 
 
+# TODO (20200710)
 class MMAE(object):
     def __init__(self, mmae_method=config.mmae_method):
-
         self.salience_of_txt = txt_salience()
         self.salience_of_img = image_salinece()
         self.relevance_img_txt = image_txt_relevance()
@@ -419,9 +422,9 @@ class MMAE(object):
         return mlp
 
     def save_mmae(self):
-        with open(config.mmae_model_path+'mmae.model', 'w') as model:
+        with open(config.mmae_model_path + 'mmae.model', 'w') as model:
             pickle.dump(self.model, model)
 
     def load_mmae(self):
-        with open(config.mmae_model_path+'mmae.model', 'r') as model:
+        with open(config.mmae_model_path + 'mmae.model', 'r') as model:
             pickle.load(self.model, model)

@@ -9,7 +9,7 @@
 import os
 import time
 
-import tensorflow as tf
+
 import torch
 
 import config
@@ -24,22 +24,18 @@ use_cuda = config.use_gpu and torch.cuda.is_available()
 
 
 class Evaluate(object):
-    def __init__(self, model_file_path):
+    def __init__(self, model_file_path='model_HAN_2_1594375342.pth'):
         self.vocab = Vocab(config.vocab_path, config.vocab_size)
-        self.batcher = Batcher(config.eval_data_path, self.vocab, mode='eval',
+        self.batcher = Batcher(config.valid_data_path, self.vocab, mode='eval',
                                batch_size=config.batch_size, single_pass=True)
         time.sleep(1)
-        model_name = os.path.basename(model_file_path)
         # store the predict picture
         self.pictures = []
-        eval_dir = os.path.join(config.log_root, 'eval_%s' % (model_name))
-        if not os.path.exists(eval_dir):
-            os.mkdir(eval_dir)
-        # self.summary_writer = tf.summary.FileWriter(eval_dir)
+        print(f'load model{model_file_path} ...')
+        self.model = MSMO(model_file_path=model_file_path, is_eval=True, img_attention_model=config.img_attention_model)
+        pass
 
-        self.model = MSMO(model_file_path=model_file_path, is_eval=True)
-
-    def eval_one_batch(self, batch):
+    def eval_one_batch(self, batch=config.batch_size):
         enc_batch, enc_padding_mask, enc_lens, enc_batch_extend_vocab, extra_zeros, c_mm, coverage_txt, imgs, coverage_img, coverage_img_patches = \
             get_input_from_batch(batch, use_cuda)
         dec_batch, dec_padding_mask, max_dec_len, dec_lens_var, target_batch = \
@@ -88,7 +84,7 @@ class Evaluate(object):
         batch_avg_loss = sum_losses / dec_lens_var
         loss = torch.mean(batch_avg_loss)
 
-        return loss.data[0]
+        return loss.item()
 
     def run_eval(self):
         running_avg_loss, iter = 0, 0
@@ -96,15 +92,17 @@ class Evaluate(object):
         batch = self.batcher.next_batch()
         while batch is not None:
             loss = self.eval_one_batch(batch)
-
-            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, self.summary_writer, iter)
+            running_avg_loss = calc_running_avg_loss(loss, running_avg_loss, iter)
             iter += 1
-
-            if iter % 100 == 0:
-                self.summary_writer.flush()
-            print_interval = 1000
+            print(f'iter{iter} running_avg_loss is {running_avg_loss}')
+            print(f'iter{iter} loss is {loss}')
+            print_interval = 1
             if iter % print_interval == 0:
                 print('steps %d, seconds for %d batch: %.2f , loss: %f' % (
                     iter, print_interval, time.time() - start, running_avg_loss))
                 start = time.time()
             batch = self.batcher.next_batch()
+        pass
+if __name__ == '__main__':
+    eval = Evaluate()
+    eval.run_eval()

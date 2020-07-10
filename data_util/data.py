@@ -228,7 +228,7 @@ class image_data(object):
         """
         imgs = []
         for img_path in self.imgs_path:
-            img = Image.open(config.train_img_path + img_path)
+            img = Image.open(config.img_path + img_path)
             img = img.resize((wight, height), Image.BILINEAR)
             # img transforms
             img_transforms = transforms.Compose([

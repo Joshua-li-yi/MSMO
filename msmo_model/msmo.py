@@ -265,7 +265,7 @@ class img_attention(nn.Module):
                   attr_img_patches B*M*512
                   coverage_patches B*M*512
         """
-        tensor_shape(s_t_hat)
+        # tensor_shape(s_t_hat)
         g_star = self.w_g(local_features)  # B*M*512*(2*hidden_dim)
         g_star = self.g_star(g_star)  # B*M*512*1
         g_star = g_star.squeeze(3).contiguous()  # B*M*512
@@ -276,7 +276,7 @@ class img_attention(nn.Module):
         e_a = torch.tanh(w_g_star + w_s_t + coverage_patches)  # B*M
         e_a = self.v(e_a)  # B*M*512
         attr_img_patches = torch.softmax(e_a, dim=1)  # B*M*512
-        coverage_patches += attr_img_patches
+        coverage_patches = coverage_patches + attr_img_patches
 
         w_g_star_i = self.w_g_star_i(g_star)  # M*B
         w_g_star_i = w_g_star_i.squeeze(2)
@@ -284,7 +284,7 @@ class img_attention(nn.Module):
         e_a_i = torch.tanh(w_g_star_i + w_s_t_i + coverage_img)
         e_a_i = self.v_i(e_a_i)  # B*M
         attr_img = torch.softmax(e_a_i, dim=1)  # B*M
-        coverage_img += attr_img
+        coverage_img = coverage_img + attr_img
 
         attr_img = attr_img.unsqueeze(1).contiguous()  # B*1*M
 
@@ -422,7 +422,7 @@ class txt_attention(nn.Module):
 class msmo_decoder(nn.Module):
     def __init__(self, img_attention_model=config.img_attention_model):
         super(msmo_decoder, self).__init__()
-        self.img_attention_model = img_attention_model
+        # self.img_attention_model = img_attention_model
         self.txt_attention = txt_attention()
         self.img_attention = img_attention(img_attention_model)
         self.multi_attention = multi_attention()
@@ -455,6 +455,7 @@ class msmo_decoder(nn.Module):
                                                        enc_padding_mask, coverage_txt)
 
             coverage_txt = coverage_next
+
             pass
 
         y_t_1_embd = self.embedding(y_t_1)
@@ -472,10 +473,10 @@ class msmo_decoder(nn.Module):
         c_i, attn_img, coverage_img_next, img_patches_next = self.img_attention(golbal_features, local_features,
                                                                            s_t_hat, coverage_img, coverage_img_patches)
 
-
         c_mm = self.multi_attention(c_t, c_i, s_t_hat)
 
         # 模型处于训练阶段
+
         if self.training or step > 0:
             coverage_txt = coverage_txt_next
             coverage_img = coverage_img_next
@@ -505,7 +506,7 @@ class msmo_decoder(nn.Module):
         else:
             final_dist = vocab_dist
 
-        return final_dist, s_t, c_mm, attn_dist, p_gen, coverage_txt, attn_img, coverage_img, img_patches
+        return final_dist, s_t, c_mm, attn_dist, p_gen, coverage_txt, attn_img, coverage_img, img_patches_next
 
 
 class MSMO(object):
@@ -541,6 +542,7 @@ class MSMO(object):
             state = torch.load(model_file_path, map_location=lambda storage, location: storage)
             self.txt_encode.load_state_dict(state['txt_encode_state_dict'])
             self.img_encode.load_state_dict(state['img_encode_state_dict'])
-            self.decoder.load_state_dict(state['decoder_state_dict'], strict=False)
+            # self.decoder.load_state_dict(state['decoder_state_dict'], strict=False)
+            self.decoder.load_state_dict(state['decoder_state_dict'])
             self.reduce_state.load_state_dict(state['reduce_state_dict'])
         pass
