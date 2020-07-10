@@ -75,6 +75,6 @@ msmo_modle_path = os.path.join('', r'')
 img_path = root_dir+'data/data_preview/img/'
 #################### MMAE ##################3
 mmae_methods = ['LR', 'Logis', 'MLP']
-mmae_method = mmae_methods[0]
+mmae_method = mmae_methods[2]
 mmae_model_path = os.path.join(root_dir, r'')
 

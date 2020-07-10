@@ -6,3 +6,8 @@
 # @Project: MSMO
 # @Description: 
 
+from mmae_model import mmae
+if __name__ == '__main__':
+    a = mmae.MMAE()
+    b = a.model_test()
+    print(b)

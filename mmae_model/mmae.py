@@ -16,7 +16,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 import torch.backends.cudnn as cudnn
 from torch.nn.utils.clip_grad import clip_grad_norm
 import numpy as np
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.neural_network import MLPRegressor
 import config
 import pandas as pd
@@ -352,31 +352,45 @@ class VSE(object):
         self.optimizer.step()
 
 
-# TODO (20200710)
 class txt_salience(object):
-    def __init__(self):
+    def __init__(self, summary_list):
+        """
+        :param summary_list: 2D list [[summary, reference]*n]
+        """
         rouge = RougeCalculator(stopwords=True, lang="en")
+        self.summary_score = []
+        for line in summary_list:
+            summary = line[0]
+            references = line[1]
+            rouge_1 = rouge.rouge_n(
+                summary=summary,
+                references=references,
+                n=1)
 
-        rouge_1 = rouge.rouge_n(
-            summary="I went to the Mars from my living town.",
-            references="I went to Mars",
-            n=1)
+            rouge_2 = rouge.rouge_n(
+                summary=summary,
+                references=references,
+                n=2)
 
-        rouge_2 = rouge.rouge_n(
-            summary="I went to the Mars from my living town.",
-            references=["I went to Mars", "It's my living town"],
-            n=2)
+            rouge_l = rouge.rouge_l(
+                summary=summary,
+                references=references)
 
-        rouge_l = rouge.rouge_l(
-            summary="I went to the Mars from my living town.",
-            references=["I went to Mars", "It's my living town"])
-
+            self.summary_score.append([rouge_1, rouge_2, rouge_l])
         pass
 
 
-# TODO (20200710)
 class image_salinece(object):
-    def __init__(self):
+    def __init__(self, img_list):
+        """
+        :param img_list: 2D list [[{msmo img},{reference imgs}]*n]
+        """
+        self.IP = []
+        for line in img_list:
+            msmo_img_set = line[0]
+            react_set = line[1]
+            self.IP.append(len(msmo_img_set.intersection(react_set)) / len(react_set))
+
         pass
 
 
@@ -391,34 +405,53 @@ class image_txt_relevance(object):
         pass
 
 
-# TODO (20200710)
 class MMAE(object):
     def __init__(self, mmae_method=config.mmae_method):
-        self.salience_of_txt = txt_salience()
-        self.salience_of_img = image_salinece()
-        self.relevance_img_txt = image_txt_relevance()
-        self.human_score = pd.DataFrame()
+        # self.salience_of_txt = txt_salience()
+        # self.salience_of_img = image_salinece()
+        # self.relevance_img_txt = image_txt_relevance()
+        # self.human_score = pd.DataFrame()
         method_dict = {
             'LR': self.LR_model,
             'Logis': self.Logis_model,
             'MLP': self.MLP_model
         }
+        # 随机生成的数据
+        self.data_train = pd.DataFrame({'m1_roug1': np.random.randn(100),
+                                        'm1_roug2': np.random.randn(100),
+                                        'm1_rougl': np.random.randn(100),
+                                        'm2': np.random.randn(100),
+                                        'm3': np.random.randn(100),
+                                        'human': np.random.randint(5, size=(100)),
+                                        })
+        self.data_test = pd.DataFrame({'m1_roug1': np.random.randn(10),
+                                       'm1_roug2': np.random.randn(10),
+                                       'm1_rougl': np.random.randn(10),
+                                       'm2': np.random.randn(10),
+                                       'm3': np.random.randn(10),
+                                       'human': np.random.randint(5, size=(10)),
+                                       })
+
         self.model = method_dict[mmae_method]()
         pass
 
     def LR_model(self):
         lr = LinearRegression()
-        lr.fit([self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
+        lr.fit(self.data_train.iloc[:, :5], y=self.data_train['human'])
         return lr
 
     def Logis_model(self):
-        lr = LinearRegression()
-        lr.fit([self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
-        return lr
+        logis = LogisticRegression()
+        logis.fit(self.data_train.iloc[:, :5], y=self.data_train['human'])
+        return logis
 
     def MLP_model(self):
-        mlp = MLPRegressor()
-        mlp.fit(x=[self.salience_of_txt, self.salience_of_txt, self.relevance_img_txt], y=self.human_score)
+        mlp = MLPRegressor(
+            hidden_layer_sizes=(6, 2), activation='relu', solver='adam', alpha=0.0001, batch_size='auto',
+            learning_rate='constant', learning_rate_init=0.001, power_t=0.5, max_iter=5000, shuffle=True,
+            random_state=1, tol=0.0001, verbose=False, warm_start=False, momentum=0.9, nesterovs_momentum=True,
+            early_stopping=False, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+        mlp.fit(self.data_train.iloc[:, :5], y=self.data_train['human'])
         return mlp
 
     def save_mmae(self):
@@ -428,3 +461,7 @@ class MMAE(object):
     def load_mmae(self):
         with open(config.mmae_model_path + 'mmae.model', 'r') as model:
             pickle.load(self.model, model)
+
+    def model_test(self):
+        score = self.model.score(self.data_test.iloc[:, :5], y=self.data_test['human'])
+        return score
